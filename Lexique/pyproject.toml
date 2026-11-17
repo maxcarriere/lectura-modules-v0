@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lectura-lexique"
+version = "1.5.4"
+description = "French lexical database access — lemmas, inflected forms with IPA phonetics and syllabification (database not included)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENCE.txt"]
+authors = [{name = "Maxime Carrière (Lectura)", email = "admin@lectura.world"}]
+keywords = [
+    "french", "lexicon", "lexique", "nlp", "dictionary",
+    "phonetics", "ipa", "morphology", "inflection",
+    "lexical-database", "wiktionary",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://www.lectura.world/developpement/modules/"
+Repository = "https://github.com/maxcarriere/lectura-modules/tree/main/Lexique"
+Issues = "https://github.com/maxcarriere/lectura-modules/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

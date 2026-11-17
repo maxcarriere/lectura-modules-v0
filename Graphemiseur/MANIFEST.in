@@ -1,0 +1,2 @@
+# Tables à ne jamais livrer (voir ../EXCLUS.md) ; les autres tables et modèles sont installés à part.
+global-exclude pos_ngram.db phone_lexicon_old.db

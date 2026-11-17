@@ -1,0 +1,25 @@
+NOTICE — lectura-tokeniseur : licence des données
+=================================================
+
+Le code de ce paquet est sous AGPL-3.0-or-later (voir LICENCE.txt), ou sous
+licence commerciale. La licence commerciale couvre le code, pas les données
+ci-dessous, qui restent sous CC BY-SA 4.0.
+
+Fichier de données sous CC BY-SA 4.0
+------------------------------------
+Licence : Creative Commons Attribution - Partage dans les mêmes conditions 4.0
+International, https://creativecommons.org/licenses/by-sa/4.0/
+
+- src/lectura_tokeniseur/data/acronymes_mots.json
+
+Source : liste de sigles prononcés comme des mots, tirée pour l'essentiel de la
+base lexicale Lectura (version interne v6, 2026), elle-même issue pour ces
+entrées du Wiktionnaire français (contributeurs du Wiktionnaire, extraction
+kaikki.org), CC BY-SA 3.0 ou 4.0 selon la date de l'extraction,
+https://fr.wiktionary.org/
+
+Modifié par Lectura : sélection des sigles lus comme des mots, ajout d'entrées.
+
+English: the code is AGPL-3.0-or-later (or commercial licence); the data file
+listed above is licensed CC BY-SA 4.0, derived from the French Wiktionary,
+modified by Lectura.

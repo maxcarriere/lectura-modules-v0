@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lectura-graphemiseur"
+version = "4.3.9"
+description = "Graphémiseur neural du français (IPA → orthographe) — P2G + POS + Morpho (BiLSTM multi-tâche)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENCE.txt", "NOTICE", "MODEL_LICENCE.md", "ATTRIBUTION.md"]
+authors = [{name = "Maxime Carrière (Lectura)", email = "admin@lectura.world"}]
+keywords = [
+    "p2g", "phoneme-to-grapheme", "french", "nlp",
+    "phonetics", "ipa", "orthography", "pos-tagging", "morphology",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+# Tout tourne en local avec ONNX Runtime (poids telecharges au premier usage).
+dependencies = ["onnxruntime>=1.16", "numpy>=1.24"]
+
+[project.optional-dependencies]
+onnx = ["onnxruntime>=1.16"]
+numpy = ["numpy>=1.24"]
+lexique = ["lectura-lexique>=1.5.4"]
+train = ["torch>=2.0", "onnx>=1.14", "onnxruntime>=1.16"]
+all = ["onnxruntime>=1.16", "numpy>=1.24", "lectura-lexique>=1.5.4"]
+
+[project.urls]
+Homepage = "https://www.lectura.world/developpement/modules/"
+Repository = "https://github.com/maxcarriere/lectura-modules/tree/main/Graphemiseur"
+Issues = "https://github.com/maxcarriere/lectura-modules/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["entrainement*", "evaluation*", "scripts*"]
+
+[tool.setuptools.package-data]
+lectura_graphemiseur = ["data/*.json"]
+
+# Ne jamais livrer ces tables (V0-PUBLICATION.md §1.2-1.3) : pos_ngram.db reprend Sequoia
+# (LGPL-LR) et le P2G v0 ne l'ouvre pas ; phone_lexicon_old.db ne sert pas.
+[tool.setuptools.exclude-package-data]
+lectura_graphemiseur = ["**/pos_ngram.db", "**/phone_lexicon_old.db", "pos_ngram.db", "phone_lexicon_old.db"]

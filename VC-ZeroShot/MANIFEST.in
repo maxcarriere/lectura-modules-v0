@@ -1,0 +1,6 @@
+include README.md NOTICE LICENCE.txt CHANGELOG.md
+recursive-include tests *.py
+# Jamais de modèle, de vecteur, de son ni de fichier chiffré dans les archives
+global-exclude *.npy *.wav *.onnx *.pth *.enc *.pyc
+prune src/lectura_vc_zeroshot/modeles
+prune src/lectura_vc_zeroshot/presets

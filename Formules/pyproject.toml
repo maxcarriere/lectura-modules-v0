@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lectura-formules"
+version = "3.7.11"
+description = "Lecture algorithmique des formules (nombres, sigles, dates, téléphones, heures, monnaies, etc.) pour le français"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENCE.txt", "NOTICE"]
+authors = [{name = "Maxime Carrière (Lectura)", email = "admin@lectura.world"}]
+keywords = [
+    "number-to-text", "text-normalization", "french", "nlp",
+    "numbers", "dates", "roman-numerals", "formulas",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://www.lectura.world/developpement/modules/"
+Repository = "https://github.com/maxcarriere/lectura-modules/tree/main/Formules"
+Issues = "https://github.com/maxcarriere/lectura-modules/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lectura_formules = [
+    "data/tables/*.csv",
+    "data/donnees_formules.json",
+]
+# Les WAV (~12 Mo, voix d'origine non établie) ne sont ni dans le paquet ni dans le dépôt
+# public (voir ../EXCLUS.md). Utiliser tables.set_sounds_dir() pour un dossier sons externe.
+
+[tool.setuptools.exclude-package-data]
+lectura_formules = ["data/sons/fr/wav/*", "data/sons/fr/wav/**"]

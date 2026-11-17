@@ -1,0 +1,3 @@
+# Enregistrements sonores (voix d'origine non établie) : jamais dans le sdist (voir ../EXCLUS.md).
+prune src/lectura_formules/data/sons/fr/wav
+global-exclude *.wav

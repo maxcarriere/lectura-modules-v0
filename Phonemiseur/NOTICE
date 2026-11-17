@@ -1,0 +1,63 @@
+NOTICE — lectura-phonemiseur : licence des données
+==================================================
+
+Le code de ce paquet est sous AGPL-3.0-or-later (voir LICENCE.txt), ou sous
+licence commerciale. Les fichiers de modèles de Lectura sont sous CC BY-NC 4.0
+(voir MODEL_LICENCE.md). Ni la licence commerciale ni MODEL_LICENCE.md ne
+couvrent les données ci-dessous, qui restent sous CC BY-SA 4.0.
+
+Fichiers de données sous CC BY-SA 4.0
+-------------------------------------
+Licence : Creative Commons Attribution - Partage dans les mêmes conditions 4.0
+International, https://creativecommons.org/licenses/by-sa/4.0/
+
+- src/lectura_phonemiseur/data/g2p_corrections_lexique.json
+- src/lectura_phonemiseur/data/g2p_corrections_unifie.json
+- src/lectura_phonemiseur/data/homographes.json
+
+Source : base lexicale Lectura (version interne v6, 2026) et table lexicale
+antérieure de Lectura, compilées à partir de :
+- GLAFF 1.2.2 — F. Sajous, N. Hathout, B. Calderone (CLLE-ERSS), CC BY-SA 3.0,
+  http://redac.univ-tlse2.fr/lexiques/glaff.html
+- Lexique 3.83 — B. New, C. Pallier, CC BY-SA 4.0, http://www.lexique.org/
+- Wiktionnaire français (contributeurs du Wiktionnaire, y compris par
+  l'extraction kaikki.org), CC BY-SA 3.0 ou 4.0 selon la date de l'extraction,
+  https://fr.wiktionary.org/
+- ipa-dict (open-dict-data), licence MIT : des transcriptions de la base
+  lexicale Lectura peuvent en provenir ; sa notice est reproduite ci-dessous.
+
+Modifié par Lectura : sélection des mots que le modèle prononce mal,
+normalisation de l'API, ajout d'élisions et de formes écrites à la main,
+ajout des homographes NOM / NOM PROPRE.
+
+Les autres fichiers de data/ (donnees_g2p.json) sont des tables écrites par
+Lectura, sous la licence du code.
+
+Notice de licence d'ipa-dict (https://github.com/open-dict-data/ipa-dict) :
+
+MIT License
+
+Copyright (c) 2016 dohliam
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+English: the code is AGPL-3.0-or-later (or commercial licence); the data files
+listed above are licensed CC BY-SA 4.0, derived from GLAFF, Lexique 3.83 and the
+French Wiktionary (and possibly ipa-dict, MIT), modified by Lectura. Lectura
+model files are CC BY-NC 4.0 (see MODEL_LICENCE.md).

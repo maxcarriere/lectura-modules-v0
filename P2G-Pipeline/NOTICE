@@ -1,0 +1,39 @@
+NOTICE — lectura-p2g : licence des données
+==========================================
+
+Le code de ce paquet est sous AGPL-3.0-or-later (voir LICENCE.txt), ou sous
+licence commerciale. Les fichiers de modèles de Lectura utilisés par ce
+paquet (via lectura-graphemiseur) sont sous CC BY-NC 4.0
+(voir MODEL_LICENCE.md). Ni la licence commerciale ni MODEL_LICENCE.md ne
+couvrent les données ci-dessous, qui restent sous CC BY-SA 4.0.
+
+Fichiers de données sous CC BY-SA 4.0
+-------------------------------------
+Licence : Creative Commons Attribution - Partage dans les mêmes conditions 4.0
+International, https://creativecommons.org/licenses/by-sa/4.0/
+
+- src/lectura_p2g/data/p2g_corrections.json
+- src/lectura_p2g/data/p2g_corrections_etendu.json
+- src/lectura_p2g/data/entites.json (transcriptions phonétiques, champ « ipa »)
+
+Source : base lexicale Lectura (version interne v6, 2026), compilée à partir de :
+- GLAFF 1.2.2 — F. Sajous, N. Hathout, B. Calderone (CLLE-ERSS), CC BY-SA 3.0,
+  http://redac.univ-tlse2.fr/lexiques/glaff.html
+- Lexique 3.83 — B. New, C. Pallier, CC BY-SA 4.0, http://www.lexique.org/
+- Wiktionnaire français (contributeurs du Wiktionnaire, y compris par
+  l'extraction kaikki.org), CC BY-SA 3.0 ou 4.0 selon la date de l'extraction,
+  https://fr.wiktionary.org/
+
+Modifié par Lectura : sélection, normalisation de l'API, inversion
+phonétique → orthographe, filtrage des ambiguïtés, ajout d'entrées.
+
+Données Wikidata (CC0)
+----------------------
+Dans src/lectura_p2g/data/entites.json, les noms des personnes (champ « label »)
+et l'indice de notoriété (champ « notoriete », nombre de liens interlangues)
+viennent de Wikidata, sous CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
+
+English: the code is AGPL-3.0-or-later (or commercial licence); the data files
+listed above are licensed CC BY-SA 4.0, derived from GLAFF, Lexique 3.83 and the
+French Wiktionary, modified by Lectura; Wikidata-derived fields are CC0. Lectura model files
+are CC BY-NC 4.0 (see MODEL_LICENCE.md).

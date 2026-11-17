@@ -1,0 +1,28 @@
+# Fichiers exclus du dépôt public (voir la liste tenue par Lectura)
+Lexique/*.db
+Lexique/LexiqueCSV/*.db
+Formules/src/lectura_formules/data/sons/fr/wav/
+pos_ngram.db
+phone_lexicon_old.db
+
+# Poids, sons et bases : jamais dans le dépôt (les poids sont sur Hugging Face)
+*.onnx
+*.npy
+*.dpk
+*.dpk.gz
+*.pt
+*.pth
+*.wav
+*.db
+*.pkl
+*.enc
+
+# Construction et environnements
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+build/
+dist*/
+venv*/
+.venv/

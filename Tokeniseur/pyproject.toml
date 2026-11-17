@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lectura-tokeniseur"
+version = "2.3.7"
+description = "Normalisateur et tokeniseur complet pour le français — détection de formules (nombres, sigles, dates, téléphones, etc.)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later AND CC-BY-SA-4.0"
+license-files = ["LICENCE.txt", "NOTICE"]
+authors = [{name = "Maxime Carrière (Lectura)", email = "admin@lectura.world"}]
+keywords = [
+    "tokenizer", "tokenisation", "french", "nlp",
+    "text-normalization", "text-processing", "formulas",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = []
+
+[project.optional-dependencies]
+formules = ["lectura-formules>=3.7"]
+
+[project.urls]
+Homepage = "https://www.lectura.world/developpement/modules/"
+Repository = "https://github.com/maxcarriere/lectura-modules/tree/main/Tokeniseur"
+Issues = "https://github.com/maxcarriere/lectura-modules/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lectura_tokeniseur = ["data/*.json"]

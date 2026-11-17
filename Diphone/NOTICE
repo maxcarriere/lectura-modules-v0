@@ -1,0 +1,67 @@
+NOTICE — lectura-diphone : licences du code et des données
+==========================================================
+
+Copyright (C) 2025-2026 Maxime Carrière (Lectura)
+
+Le code de ce paquet est sous AGPL-3.0-or-later (voir LICENCE.txt), ou sous
+licence commerciale Lectura sur demande (https://www.lectura.world/contact/).
+Ce paquet ne contient aucun fichier de modèle de Lectura : MODEL_LICENCE.md
+(CC BY-NC 4.0) ne le concerne pas.
+
+Données tirées du corpus SIWIS, sous CC BY 4.0
+----------------------------------------------
+Licence : Creative Commons Attribution 4.0 International,
+https://creativecommons.org/licenses/by/4.0/ (texte complet : LICENCE-DONNEES.txt).
+La licence commerciale de Lectura ne couvre pas ces données : elles restent
+sous CC BY 4.0, quel que soit l'usage.
+
+Fichiers concernés :
+- diphones.dpk.gz (banque de diphones, hors roue, téléchargée depuis
+  https://huggingface.co/lecturaworld/lectura-diphone-v0) ;
+- diphone_statistics.pkl (statistiques prosodiques, même dépôt) ;
+- src/lectura_diphone/_group_contour_bank.json (contours de F0 par groupe
+  prosodique, livré dans la roue).
+
+Crédit :
+
+  Voix fr-f1 : données tirées de « The SIWIS French Speech Synthesis
+  Database », J. Yamagishi, P.-E. Honnet, P. N. Garner, A. Lazaridis,
+  University of Edinburgh, Centre for Speech Technology Research, 2017,
+  https://doi.org/10.7488/ds/1705. Licence CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/). Enregistrements découpés en
+  diphones, analysés par le vocodeur WORLD (F0, enveloppe spectrale,
+  apériodicité), moyennés par diphone (jusqu'à 10 occurrences) et compressés
+  (enveloppe tronquée à 8 kHz, précision réduite) par Lectura ; statistiques de
+  durée et de F0 et contours de F0 calculés par Lectura sur le même corpus.
+  Cette réutilisation n'implique aucune approbation des auteurs ni de la
+  personne enregistrée.
+
+Le code ne fournit et n'accepte aucune autre voix de référence : le
+changement de timbre facultatif (voir README) passe par lectura-vc-zeroshot,
+qui a ses propres NOTICE et crédits.
+
+Autres fichiers
+---------------
+src/lectura_diphone/data/phoneme_vocab.json : table écrite par Lectura, sous
+la licence du code.
+
+Marquage IA
+-----------
+Les WAV écrits par ce paquet portent des métadonnées IPTC
+(trainedAlgorithmicMedia) ; un son passé par le changement de timbre porte en
+plus le filigrane IA de lectura-vc-zeroshot (AI Act, art. 50). Ne retirez pas
+le marquage.
+
+---
+
+English. Code: AGPL-3.0-or-later, or a Lectura commercial licence on request.
+The diphone bank (diphones.dpk.gz), the prosodic statistics
+(diphone_statistics.pkl) and _group_contour_bank.json are adapted from "The
+SIWIS French Speech Synthesis Database" (J. Yamagishi, P.-E. Honnet,
+P. N. Garner, A. Lazaridis, University of Edinburgh, CSTR, 2017,
+https://doi.org/10.7488/ds/1705) and remain under CC BY 4.0
+(LICENCE-DONNEES.txt): recordings cut into diphones, analysed with the WORLD
+vocoder, averaged per diphone and compressed by Lectura; prosodic statistics
+computed by Lectura. No endorsement by the authors or by the recorded speaker
+is implied. Do not remove the AI marking (metadata, and watermark after timbre
+conversion).

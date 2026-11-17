@@ -1,0 +1,3 @@
+# Bases de données du dossier source : jamais dans le sdist ni dans le dépôt public (voir ../EXCLUS.md).
+global-exclude *.db
+prune LexiqueCSV

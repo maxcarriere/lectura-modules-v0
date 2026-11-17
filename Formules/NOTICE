@@ -1,0 +1,20 @@
+NOTICE — lectura-formules : licence des données
+================================================
+
+Le code de ce paquet est sous AGPL-3.0-or-later (voir LICENCE.txt), ou sous
+licence commerciale. Ce paquet ne contient aucun fichier de modèle.
+
+Les fichiers src/lectura_formules/data/donnees_formules.json et
+src/lectura_formules/data/tables/*.csv (nombres, lettres, symboles, alphabet
+grec, ordinaux, mois, unités de mesure, devises, chiffres romains, avec leur
+lecture et leur phonétique) contiennent des tables écrites par Lectura, sous la
+licence du code.
+
+Les enregistrements sonores (data/sons/fr/wav/) ne sont ni dans le paquet ni
+dans le dépôt public ; les identifiants de son des tables (colonne « sound »)
+n'y renvoient que si l'utilisateur configure son propre dossier
+(tables.set_sounds_dir).
+
+English: the code is AGPL-3.0-or-later (or commercial licence); the data tables
+in data/ were written by Lectura and are under the code licence. Audio files are
+not distributed.

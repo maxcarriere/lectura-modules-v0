@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lectura-p2g"
+version = "4.6.5"
+description = "Pipeline P2G complet du francais — Graphemiseur + Formules + Noms propres (IPA -> orthographe)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later AND CC-BY-SA-4.0"
+license-files = ["LICENCE.txt", "NOTICE", "MODEL_LICENCE.md"]
+authors = [{name = "Maxime Carrière (Lectura)", email = "admin@lectura.world"}]
+keywords = [
+    "p2g", "phoneme-to-grapheme", "inverse-g2p", "french", "nlp",
+    "phonetics", "ipa", "orthography", "speech-to-text",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "lectura-graphemiseur>=4.3.9",
+    "lectura-formules>=3.7.11",
+    "lectura-lexique>=1.5.4",
+]
+
+[project.optional-dependencies]
+aligneur = ["lectura-aligneur>=4.0.5"]
+
+[project.urls]
+Homepage = "https://www.lectura.world/developpement/modules/"
+Repository = "https://github.com/maxcarriere/lectura-modules/tree/main/P2G-Pipeline"
+Issues = "https://github.com/maxcarriere/lectura-modules/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lectura_p2g = ["data/entites.json", "data/p2g_corrections.json", "data/p2g_corrections_etendu.json"]

@@ -1,0 +1,5 @@
+include README.md NOTICE LICENCE.txt LICENCE-DONNEES.txt CHANGELOG.md
+recursive-include tests *.py
+# Jamais de banque, de modèle, de son ni de fichier chiffré dans les archives
+global-exclude *.dpk *.dpk.gz *.pkl *.enc *.onnx *.wav *.npy *.pyc
+prune src/lectura_diphone/modeles

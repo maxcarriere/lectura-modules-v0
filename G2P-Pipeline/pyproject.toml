@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lectura-g2p"
+version = "4.1.5"
+description = "Pipeline G2P complet du français — Tokeniseur + Formules + Phonémiseur + Groupes de lecture"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENCE.txt", "MODEL_LICENCE.md"]
+authors = [{name = "Maxime Carrière (Lectura)", email = "admin@lectura.world"}]
+keywords = [
+    "g2p", "grapheme-to-phoneme", "text-to-phoneme", "french", "nlp",
+    "phonemizer", "phonetics", "ipa", "tts-frontend",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: French",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+    "lectura-tokeniseur>=2.3.7",
+    "lectura-formules>=3.7.11",
+    "lectura-phonemiseur>=4.1.11",
+    "lectura-lexique>=1.5.4",
+]
+
+[project.optional-dependencies]
+aligneur = ["lectura-aligneur>=4.0.5"]
+
+[project.urls]
+Homepage = "https://www.lectura.world/developpement/modules/"
+Repository = "https://github.com/maxcarriere/lectura-modules/tree/main/G2P-Pipeline"
+Issues = "https://github.com/maxcarriere/lectura-modules/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

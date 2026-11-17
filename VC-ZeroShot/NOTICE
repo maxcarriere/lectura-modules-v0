@@ -1,0 +1,185 @@
+NOTICE — lectura-vc-zeroshot : licences des composants de tiers
+================================================================
+
+Copyright (C) 2025-2026 Maxime Carrière (Lectura)
+
+Le code de ce paquet est sous AGPL-3.0-or-later (voir LICENCE.txt), ou sous
+licence commerciale. La roue ne contient aucun modèle, aucun vecteur de timbre
+ni aucun son. Au premier usage, le paquet télécharge depuis
+https://huggingface.co/lecturaworld/lectura-vc-zeroshot-v0 (empreintes SHA-256
+vérifiées) :
+- les modèles d'OpenVoice et d'AudioSeal, sous licence MIT (textes ci-dessous) ;
+- les vecteurs des trois préréglages de voix (fr-f1, melange-f, melange-h),
+  sous CC BY 4.0 : voir « Préréglages de voix ».
+
+OpenVoice
+---------
+openvoice_se.onnx (extracteur d'empreinte de timbre) et openvoice_vc.onnx
+(convertisseur) sont des conversions au format ONNX des points de contrôle
+d'OpenVoice (MyShell.ai, https://github.com/myshell-ai/OpenVoice). Depuis avril
+2024, le code et les points de contrôle d'OpenVoice V1 et V2 sont distribués
+sous licence MIT. Ils sont publiés, avec ce texte, dans le dépôt Hugging Face
+ci-dessus (dossier openvoice/), car les dépôts officiels ne diffusent que les
+points de contrôle PyTorch (converter/checkpoint.pth de myshell-ai/OpenVoiceV2).
+
+MIT License
+
+Copyright 2024 MyShell.ai
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+AudioSeal (filigrane)
+---------------------
+lectura-vc-zeroshot embarque lectura_vc_zeroshot/_filigrane.py (marquage IA, AI Act art. 50).
+Les modèles generator_base.onnx et detector_base.onnx ne sont pas dans la roue : ils sont lus dans
+~/.lectura/models/filigrane/ (ou $LECTURA_FILIGRANE_ONNX, $LECTURA_FILIGRANE_DETECTEUR_ONNX), où ils sont
+téléchargés au premier usage depuis le dépôt Hugging Face ci-dessus (dossier filigrane/). Ce sont nos
+conversions ONNX : le dépôt officiel facebook/audioseal ne diffuse que les poids PyTorch (.pth).
+
+generator_base.onnx est une conversion au format ONNX du générateur AudioSeal
+(carte audioseal_wm_16bits, poids generator_base de https://huggingface.co/facebook/audioseal),
+paquet audioseal 0.2.0 (https://github.com/facebookresearch/audioseal).
+detector_base.onnx est, de même, la conversion ONNX du détecteur AudioSeal
+(carte audioseal_detector_16bits, poids detector_base du même dépôt).
+Le code et les poids d'AudioSeal sont distribués sous licence MIT :
+
+MIT License
+
+Copyright (c) Meta Platforms, Inc. and affiliates.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Le rééchantillonnage de lectura_vc_zeroshot/_filigrane.py reproduit en numpy la méthode de
+torchaudio.functional.resample (torchaudio, licence BSD-2-Clause,
+Copyright (c) 2017 Facebook Inc. (Soumith Chintala)).
+
+Texte de la licence BSD-2-Clause de torchaudio :
+
+BSD 2-Clause License
+
+Copyright (c) 2017 Facebook Inc. (Soumith Chintala),
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Préréglages de voix (vecteurs de timbre, hors roue)
+---------------------------------------------------
+Trois vecteurs de timbre OpenVoice (tableaux de 256 nombres), sans aucun son,
+téléchargés depuis le dépôt Hugging Face ci-dessus (dossier presets/).
+Pour le curseur grave/aigu, chaque préréglage a aussi un fichier
+<nom>-variantes.npy (9 positions), sous la même licence que le préréglage ;
+ces positions sont calculées à partir du préréglage lui-même, sans vecteur
+d'un lecteur seul.
+
+fr-f1 (presets/fr-f1.npy), licence CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/) :
+
+  Voix fr-f1 : vecteur de timbre tiré de « The SIWIS French Speech Synthesis
+  Database », J. Yamagishi, P.-E. Honnet, P. N. Garner, A. Lazaridis,
+  University of Edinburgh, Centre for Speech Technology Research, 2017,
+  https://doi.org/10.7488/ds/1705. Licence CC BY 4.0
+  (https://creativecommons.org/licenses/by/4.0/). Extraits réduits par Lectura
+  à un vecteur de timbre par l'encodeur d'OpenVoice ; aucun son n'est livré. Cette réutilisation n'implique aucune approbation des
+  auteurs ni de la personne enregistrée.
+
+melange-f (presets/melange-f.npy) et melange-h (presets/melange-h.npy),
+licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/) :
+
+  Voix de référence masculine et féminine : vecteurs de timbre moyens, tirés
+  de plusieurs voix du M-AILABS Speech Dataset (enregistrements LibriVox,
+  domaine public) et du corpus SIWIS (CC BY 4.0, voir ci-dessus). Ils sont
+  mesurés pour ne ressembler à aucun lecteur.
+
+  melange-f contient des données SIWIS. Crédit : « The SIWIS French Speech
+  Synthesis Database », J. Yamagishi, P.-E. Honnet, P. N. Garner,
+  A. Lazaridis, University of Edinburgh, Centre for Speech Technology
+  Research, 2017, https://doi.org/10.7488/ds/1705, licence CC BY 4.0.
+  Modification : vecteur de timbre tiré d'un mélange de voix, dont des
+  enregistrements SIWIS (moyenne pondérée de vecteurs OpenVoice, puis
+  renormalisée), par Lectura. Cette réutilisation n'implique aucune
+  approbation des auteurs ni des personnes enregistrées.
+
+Vecteurs : Copyright (C) 2025-2026 Maxime Carrière (Lectura). Aucun nom de
+lecteur ni aucun vecteur individuel des voix mélangées n'est publié.
+
+Utilisation responsable
+-----------------------
+Le paquet accepte aussi un fichier audio de référence fourni par
+l'utilisateur (conversion zero-shot).
+N'utilisez que votre propre voix, ou une voix dont vous avez l'accord écrit.
+Imiter la voix d'une personne sans son consentement peut porter atteinte à ses
+droits (C. civ. art. 9). Diffuser un tel contenu sans qu'il soit évident, ou
+expressément indiqué, qu'il est généré par un algorithme peut aussi constituer
+un délit (C. pén. art. 226-8).
+Toute sortie porte le filigrane IA AudioSeal (AI Act, art. 50) : ne retirez
+pas le marquage.
+
+---
+
+English. Code: AGPL-3.0-or-later, or a Lectura commercial licence on request.
+No model, voice vector or audio is shipped in the wheel. On first use the
+package downloads, from https://huggingface.co/lecturaworld/lectura-vc-zeroshot-v0
+(SHA-256 checked): OpenVoice ONNX conversions (MIT, MyShell.ai), AudioSeal ONNX
+conversions (MIT, Meta), and three timbre vectors: fr-f1 (from the SIWIS French
+Speech Synthesis Database, Yamagishi et al., University of Edinburgh, 2017,
+https://doi.org/10.7488/ds/1705, CC BY 4.0), melange-f (blend of several voices
+including SIWIS, CC BY 4.0) and melange-h (blend of several voices, CC BY
+4.0). The blended voices come from the M-AILABS Speech Dataset (LibriVox
+recordings, public domain) and SIWIS, and are measured not to resemble any
+reader. Every output carries the AudioSeal AI watermark: do not remove it.
+Only use your own voice, or a voice whose owner has given you written consent.
+Imitating a person's voice without their consent may infringe their rights
+(French Civil Code, art. 9). Distributing such content without it being
+obvious, or expressly stated, that it was generated by an algorithm may also
+be a criminal offence (French Criminal Code, art. 226-8).
