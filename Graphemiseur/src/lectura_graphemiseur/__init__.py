@@ -32,7 +32,7 @@ from pathlib import Path
 from lectura_graphemiseur import _poids
 from lectura_graphemiseur._poids import LecturaModelesIndisponibles
 
-__version__ = "4.4.1"
+__version__ = "4.4.2"
 
 logger = logging.getLogger(__name__)
 

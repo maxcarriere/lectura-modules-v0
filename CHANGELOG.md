@@ -1,5 +1,9 @@
 # Journal des versions des modules Lectura v0
 
+## 23/11/2026, soir (2) : documentation seulement
+
+phonemiseur 4.2.2 et graphemiseur 4.4.2 : résultats aussi sur le corpus d'évaluation de Lectura (phrases ordinaires), en plus de CSF18 (phrases difficiles) et de WikiPron.
+
 ## 23/11/2026, soir : documentation seulement
 
 | Paquet | Version | Changement |

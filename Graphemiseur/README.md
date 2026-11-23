@@ -104,7 +104,15 @@ La base naïve écrit chaque mot avec l'orthographe la plus fréquente de sa pro
 CSF18 sont faites pour couvrir tous les sons du français : beaucoup de noms propres et de mots rares, peu de sens, et
 la même notation pour « de » et « deux ». Le chiffre est donc sévère pour un outil qui s'appuie sur le contexte.
 
-**2. Modèle de mot seul : WikiPron** (5 000 mots), sans lexique (`use_lex=False`, sélection lexicale coupée) :
+**2. Écriture de phrases ordinaires : corpus d'évaluation de Lectura** (test, 2 408 phrases naturelles). Entrée : la
+phonétique de référence de chaque mot, tirée des données de Lectura (à lire comme une indication) ; mots faux (WER
+strict) :
+
+| | Base naïve | **Lectura v0** |
+|---|---|---|
+| Corpus Lectura | 28,9 % | **15,3 %** |
+
+**3. Modèle de mot seul : WikiPron** (5 000 mots), sans lexique (`use_lex=False`, sélection lexicale coupée) :
 34,2 % des mots isolés écrits exactement. Sans contexte, l'écriture d'un mot est ambiguë par nature (« ver, vert,
 verre, vers ») : c'est la mesure du réseau seul, pas de l'usage réel.
 

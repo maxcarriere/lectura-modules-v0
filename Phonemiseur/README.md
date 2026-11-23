@@ -132,7 +132,16 @@ des deux lectures enregistrées de chaque phrase ; « timbres confondus » : e/�
 Une grande part des écarts stricts vient du timbre propre au locuteur (« aux », « nos » prononcés avec ɔ) et de
 quelques transcriptions discutables du corpus.
 
-**2. Modèle de mot seul : WikiPron** (5 000 mots tirés au hasard), sans lexique ni table de correction
+**2. Lecture de phrases ordinaires : corpus d'évaluation de Lectura** (test, 2 409 phrases naturelles annotées en
+Universal Dependencies, jamais vues à l'entraînement). La phonétique de référence vient des données de Lectura, avec
+leurs conventions : à lire comme une indication. Mots justes en comparaison stricte, et PER de phrase :
+
+| Système | Mots justes, strict | PER strict |
+|---|---|---|
+| **Lectura v0** | **91,9 %** | **4,4 %** |
+| espeak-ng 1.51 | 89,1 % | 14,0 % |
+
+**3. Modèle de mot seul : WikiPron** (5 000 mots tirés au hasard), sans lexique ni table de correction
 (`corrections_lexique=False`, `use_lex=False`). Mots justes :
 
 | Système | Strict | Timbres confondus | Timbres et e muet facultatif tolérés |
@@ -142,7 +151,7 @@ quelques transcriptions discutables du corpus.
 
 WikiPron note rarement le e muet facultatif que le modèle indique (« cancan(e)rons »), d'où la troisième colonne.
 
-**3. Analyse grammaticale** : test Universal Dependencies (2 409 phrases, jamais vues à l'entraînement, ponctuation
+**4. Analyse grammaticale** : test Universal Dependencies (2 409 phrases, jamais vues à l'entraînement, ponctuation
 exclue), référence humaine : catégorie du mot (UPOS) 94,6 % ; les 6 traits morphologiques justes ensemble 79,9 %.
 
 CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022. WikiPron : Lee et al., LREC 2020 (données du Wiktionnaire, CC BY-SA).
