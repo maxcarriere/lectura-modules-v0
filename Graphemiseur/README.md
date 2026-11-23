@@ -90,23 +90,25 @@ Le `phone_lexicon.db` est detecte automatiquement dans le dossier modeles. Sans 
 
 ## Résultats
 
-Bancs du 23/11/2026, en local sur CPU, avec le code publié corrigé (`lectura-p2g`, sans le correcteur neuronal,
-retiré : il abîmait des mots justes) et les poids publiés. Taux d'erreur sur les mots (WER strict, casse et ponctuation
-ignorées). Aucun outil public comparable n'existe à notre connaissance ; la base naïve écrit chaque mot avec son
-orthographe la plus fréquente, sans contexte.
+Bancs du 23/11/2026, en local sur CPU, avec le code publié corrigé (sans le correcteur neuronal, retiré : il
+abîmait des mots justes) et les poids publiés. Aucun outil public comparable n'existe à notre connaissance.
 
-| Banc | Entrée | Base naïve | **Lectura P2G v0** |
-|---|---|---|---|
-| FLEURS test (676 phrases lues) | phonétique **entendue dans l'audio** par un modèle acoustique, commune à tous | 36,8 % | **20,5 %** |
-| CSF18 (238 phrases) | phonétique **corrigée à la main** ; frontières de mots posées par alignement | 41,4 % | **25,5 %** |
+**1. Écriture de phrases : CSF18** (238 phrases ; entrée : la phonétique corrigée à la main, frontières de mots
+posées par alignement). Mots faux (WER strict, casse et ponctuation ignorées) de la chaîne complète `lectura-p2g` :
 
-Les chiffres de FLEURS comprennent les erreurs d'écoute du modèle acoustique (environ 5,7 % des phonèmes). CSF18 est
-fait de phrases qui couvrent tous les sons du français, avec beaucoup de noms propres et de mots rares, que l'oreille
-seule ne permet pas d'écrire.
+| | Base naïve | **Lectura v0** |
+|---|---|---|
+| CSF18 | 41,2 % | **25,3 %** |
 
-CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022. FLEURS : Conneau et al., 2022 (CC BY 4.0).
+La base naïve écrit chaque mot avec l'orthographe la plus fréquente de sa prononciation, sans contexte. Les phrases de
+CSF18 sont faites pour couvrir tous les sons du français : beaucoup de noms propres et de mots rares, peu de sens, et
+la même notation pour « de » et « deux ». Le chiffre est donc sévère pour un outil qui s'appuie sur le contexte.
 
-Limites constatées : le modèle ne rend ni majuscules ni ponctuation.
+**2. Modèle de mot seul : WikiPron** (5 000 mots), sans lexique (`use_lex=False`, sélection lexicale coupée) :
+34,2 % des mots isolés écrits exactement. Sans contexte, l'écriture d'un mot est ambiguë par nature (« ver, vert,
+verre, vers ») : c'est la mesure du réseau seul, pas de l'usage réel.
+
+CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022. WikiPron : Lee et al., LREC 2020 (données du Wiktionnaire, CC BY-SA).
 
 ## Interface Python
 

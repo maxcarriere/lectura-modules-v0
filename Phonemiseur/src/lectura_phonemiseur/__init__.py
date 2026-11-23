@@ -24,7 +24,7 @@ from pathlib import Path
 from lectura_phonemiseur import _poids
 from lectura_phonemiseur._poids import LecturaModelesIndisponibles
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 
 _MODELES_DIR = Path(__file__).parent / "modeles"
 

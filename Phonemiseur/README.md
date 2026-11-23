@@ -117,41 +117,35 @@ Les corrections stockent les separateurs dans l'IPA (`aba-ʒuʁ`, `d'abɔʁ`). Q
 
 ## Résultats
 
-Bancs du 23/11/2026, en local sur CPU, avec le code publié (`lectura-g2p` 4.1.5, `lectura-phonemiseur` 4.1.11) et
-les poids publiés. Le même banc sert pour toutes les générations de Lectura ; espeak-ng 1.51 est mesuré comme point de
-comparaison extérieur.
+Bancs du 23/11/2026, en local sur CPU, avec le code publié et les poids publiés. Le même banc sert pour toutes
+les générations de Lectura ; espeak-ng 1.51 sert de point de comparaison extérieur.
 
-**1. Lecture de phrases, référence humaine indépendante : CSF18.** 238 phrases françaises dont la transcription
-phonétique a été corrigée à la main. On mesure le taux d'erreur sur les phonèmes (PER), sur la meilleure des deux
-lectures enregistrées de chaque phrase, sans frontière de mot.
+**1. Lecture de phrases : CSF18** (238 phrases dont la phonétique a été corrigée à la main). Chaîne complète
+`lectura-g2p` (`texte_vers_phrases_ipa`, liaisons comprises). Taux d'erreur sur les phonèmes (PER), sur la meilleure
+des deux lectures enregistrées de chaque phrase ; « timbres confondus » : e/ɛ, o/ɔ et ø/œ comptés égaux.
 
-| Système | PER strict | PER, timbres confondus (e/ɛ, o/ɔ, ø/œ) |
+| Système | PER strict | PER, timbres confondus |
 |---|---|---|
-| **Lectura G2P v0** | **6,65 %** | **2,76 %** |
+| **Lectura v0** | **6,72 %** | **2,85 %** |
 | espeak-ng 1.51 | 12,85 % | 8,90 % |
 
-Une grande part de l'écart strict vient du timbre propre au locuteur (« aux », « nos » prononcés avec ɔ). Ces phrases
-couvrent tous les sons du français mais contiennent peu d'homographes.
+Une grande part des écarts stricts vient du timbre propre au locuteur (« aux », « nos » prononcés avec ɔ) et de
+quelques transcriptions discutables du corpus.
 
-CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022.
+**2. Modèle de mot seul : WikiPron** (5 000 mots tirés au hasard), sans lexique ni table de correction
+(`corrections_lexique=False`, `use_lex=False`). Mots justes :
 
-**2. Corpus d'évaluation de Lectura** (phrases annotées en Universal Dependencies, test de 2 409 phrases). La
-référence phonétique vient d'un autre système de Lectura, avec ses conventions : à lire comme une indication.
+| Système | Strict | Timbres confondus | Timbres et e muet facultatif tolérés |
+|---|---|---|---|
+| **Lectura v0** | 68,6 % | 85,7 % | **94,3 %** |
+| espeak-ng 1.51 | 74,4 % | 89,3 % | 90,4 % |
 
-| | Lectura G2P v0 |
-|---|---|
-| Mots justes, strict | 91,9 % |
-| Mots justes, timbres et ə/ø confondus | 99,0 % |
-| PER strict | 4,4 % |
+WikiPron note rarement le e muet facultatif que le modèle indique (« cancan(e)rons »), d'où la troisième colonne.
 
-**3. Analyse grammaticale**, test UD (2 409 phrases, ponctuation exclue), référence humaine UD (banc du 16/11, même
-modèle) : catégorie du mot (UPOS) 94,6 % ; les 6 traits morphologiques justes ensemble 79,9 %.
+**3. Analyse grammaticale** : test Universal Dependencies (2 409 phrases, jamais vues à l'entraînement, ponctuation
+exclue), référence humaine : catégorie du mot (UPOS) 94,6 % ; les 6 traits morphologiques justes ensemble 79,9 %.
 
-Limites constatées :
-
-- les homographes au sens strict (« est », « fils »…) ne sont justes que dans 62 à 73 % des cas (comparaison stricte) ;
-- les liaisons obligatoires des inversions (« est-il ») sont souvent manquées ;
-- le modèle ne donne pas de lemme.
+CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022. WikiPron : Lee et al., LREC 2020 (données du Wiktionnaire, CC BY-SA).
 
 ## Interface Python
 
