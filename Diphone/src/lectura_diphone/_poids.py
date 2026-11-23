@@ -40,7 +40,7 @@ SOUS_DOSSIER = "tts_diphone"
 DEPOT_HF = "lecturaworld/lectura-diphone-v0"
 # Révision du dépôt : une branche, ou mieux un identifiant de commit une fois le
 # dépôt publié. Les empreintes ci-dessous protègent de toute façon le contenu.
-REVISION_HF = "a2710b306b802631caf18990625ba0ebd1308e95"
+REVISION_HF = "23401a1d1d2f7acdc30cf58a2b3735ec4df8bc29"
 
 # fichier -> (sha256, taille en octets)
 FICHIERS: dict[str, tuple[str, int]] = {
@@ -179,6 +179,17 @@ def _telecharger_un(nom: str, dossier: Path) -> None:
                 pass
 
 
+
+def _signaler_telechargement() -> None:
+    """Demande ``config.json`` au dépôt (requête HEAD, sans effet si elle échoue) : Hugging Face ne compte un
+    téléchargement que sur ce fichier (https://huggingface.co/docs/hub/models-download-stats). Ajouté le 23/11/2026."""
+    try:
+        req = urllib.request.Request(url_fichier("config.json"), method="HEAD",
+                                     headers={"User-Agent": "lectura-modeles"})
+        urllib.request.urlopen(req, timeout=5).close()
+    except Exception:  # noqa: BLE001 — un simple comptage ne doit jamais gêner l'installation
+        pass
+
 def assurer_modeles(models_dir: str | Path | None = None) -> Path:
     """Renvoie le dossier de la banque, après l'avoir téléchargée si elle manque.
 
@@ -212,6 +223,7 @@ def assurer_modeles(models_dir: str | Path | None = None) -> Path:
         dossier.mkdir(parents=True, exist_ok=True)
         for nom in manquants:
             _telecharger_un(nom, dossier)
+        _signaler_telechargement()
     except LecturaModelesIndisponibles:
         raise
     except (urllib.error.URLError, OSError, ValueError) as exc:

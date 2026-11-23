@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectura-graphemiseur"
-version = "4.3.9"
+version = "4.4.0"
 description = "Graphémiseur neural du français (IPA → orthographe) — P2G + POS + Morpho (BiLSTM multi-tâche)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,9 +33,8 @@ dependencies = ["onnxruntime>=1.16", "numpy>=1.24"]
 [project.optional-dependencies]
 onnx = ["onnxruntime>=1.16"]
 numpy = ["numpy>=1.24"]
-lexique = ["lectura-lexique>=1.5.4"]
 train = ["torch>=2.0", "onnx>=1.14", "onnxruntime>=1.16"]
-all = ["onnxruntime>=1.16", "numpy>=1.24", "lectura-lexique>=1.5.4"]
+all = ["onnxruntime>=1.16", "numpy>=1.24"]
 
 [project.urls]
 Homepage = "https://www.lectura.world/developpement/modules/"

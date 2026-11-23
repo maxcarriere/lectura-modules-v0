@@ -36,7 +36,15 @@ Pour poser la banque à la main : télécharger les fichiers du dépôt, vérifi
 lectura-diphone --phonemes "b ɔ̃ ʒ u ʁ | l ə m ɔ̃ d" -o bonjour.wav   # sans G2P
 lectura-diphone "Bonjour le monde." -o bonjour.wav                    # demande [g2p]
 lectura-diphone "Bonjour le monde." --mode SYLLABES --vitesse 1.2 -o lent.wav
+lectura-diphone "Bonjour." --prosodie corpus --f0 120 --seed 1 -o grave.wav
+lectura-diphone "Bonjour." --voix melange-f -o b.wav                  # demande [vc] ; filigrane IA
 ```
+
+Options : `-o/--sortie` (défaut `sortie.wav`), `--phonemes` (groupes séparés par `|`), `--mode`
+(`FLUIDE`, `MOT_A_MOT`, `SYLLABES`), `--vitesse` (= `duration_scale`), `--prosodie` (`regles`, `corpus`),
+`--f0` (= `base_f0`, Hz), `--seed`, `--voix` (`fr-f1`, `melange-f`, `melange-h`), `--models-dir`,
+`--telecharger`, `--verifier`, `--version`. Les autres réglages (`voix_variante`, `pause_scale`, `timbre`…) ne
+sont accessibles que depuis Python.
 
 ### Depuis des phonèmes (API Python)
 
@@ -63,11 +71,24 @@ resultat.vers_wav("bonjour.wav")
 
 `g2p=` accepte aussi votre propre fonction `texte -> [{"phones": [...], "boundary": "period"}, ...]`.
 
+`synthetiser()` crée le moteur (chargement de la banque, du G2P et, avec `voix=`, du moteur de conversion) au premier
+appel, puis le garde en mémoire pour les appels suivants avec les mêmes `models_dir` et `g2p` : seul le premier appel
+paie le chargement, et le son est identique à celui d'un moteur neuf (même graine, même son). `vider_cache()` libère
+cette mémoire. Pour tout contrôler, créez le moteur vous-même avec `creer_engine()` (il renvoie un `DiphoneEngine`).
+
+Un groupe peut porter, en plus de `phones` et `boundary`, la clé facultative `word_boundaries` : indices des phonèmes
+qui commencent un mot (le premier mot est implicite), utilisés pour le découpage prosodique et les timings.
+Un phonème absent de la banque est remplacé par un silence et signalé par un avertissement (`UserWarning`).
+
+**`mode` a deux sens.** Dans `creer_engine()` et `synthetiser()`, `mode` vaut `"auto"` ou `"local"` (identiques :
+tout tourne en local). Le mode de synthèse (`FLUIDE`, `MOT_A_MOT`, `SYLLABES`) s'appelle `synth_mode` dans
+`synthetiser()` et `mode` dans `DiphoneEngine.synthesize_groups()` (valeur texte ou `SynthMode`).
+
 ## Réglages
 
 | Paramètre | Défaut | Effet |
 |---|---|---|
-| `mode` / `synth_mode` | `"FLUIDE"` | `FLUIDE`, `MOT_A_MOT`, `SYLLABES` |
+| `synth_mode` (`synthetiser`) / `mode` (`synthesize_groups`) | `"FLUIDE"` | `FLUIDE`, `MOT_A_MOT`, `SYLLABES` |
 | `duration_scale` | 1.0 | vitesse (>1 = plus lent) |
 | `pause_scale` | 1.0 | durée des pauses entre groupes |
 | `sentence_pause_ms` | 400 | pause entre phrases (ms) |
@@ -75,10 +96,16 @@ resultat.vers_wav("bonjour.wav")
 | `micro_expressivity` | 1.0 | micro-variations (mode FLUIDE) |
 | `prosody_style` | `"regles"` | `"regles"` (LHiLH*) ou `"corpus"` (contours tirés du corpus SIWIS) |
 | `base_f0` | 175.0 | hauteur de base (Hz) |
-| `ap_cleanup`, `formant_sharpening`, `vtln_alpha` | 1.5, 1.3, 1.0 | réglages du timbre par traitement du signal |
-| `timbre` | `None` | signature paramétrique `"neutre"`, `"homme"`, `"enfant"` (traitement du signal) |
+| `ap_cleanup` | 1.5 | compression de l'apériodicité (1.0 = sans) ; **maximum 3.0** : au-delà, ramené à 3.0 avec un avertissement |
+| `formant_sharpening` | 1.3 | affûtage des formants (1.0 = sans) ; **maximum 2.0** : au-delà, ramené à 2.0 avec un avertissement |
+| `vtln_alpha` | 1.0 | déformation du conduit vocal (0.8 = grave, 1.2 = aigu) |
+| `spectral_contrast` | 1.3 | contraste spectral (1.0 = sans, 2.0 = fort) ; `synthesize_groups` seulement |
+| `prosody` | `None` | `synthesize_groups` seulement : dict facultatif `{"f0_hz": ..., "duration_scale": ...}` appliqué à chaque groupe (F0 moyenne visée, facteur de durée) |
+| `timbre` | `None` | signature paramétrique `"neutre"`, `"homme"`, `"enfant"`, ou chemin d'un fichier `.json` (liste de coefficients cepstraux, ou `{"signature": [...]}`) ; traitement du signal |
 | `seed` | `None` | graine : même graine, même son |
 | `voix` | `None` | changement de timbre par IA, voir ci-dessous |
+| `voix_variante` | 0.0 | curseur grave/aigu du changement de timbre (-1 à +1) |
+| `voix_tau` | `None` | **sans effet** (le modèle ONNX d'OpenVoice n'a pas cette entrée) ; gardé pour compatibilité, `DeprecationWarning` s'il est donné |
 
 ## Changement de timbre par IA (`[vc]`)
 
@@ -91,6 +118,7 @@ resultat.vers_wav("bonjour.wav")
 | `melange-h` | voix masculine mélangée (idem) |
 
 Les trois timbres sont des préréglages de lectura-vc-zeroshot (>= 1.3), qui télécharge leurs vecteurs au premier usage (licences et crédits dans son NOTICE, tous sous CC BY 4.0). Le curseur `voix_variante` (-1 = plus grave, « homme » ; +1 = plus aigu, « enfant » ; 0 = timbre tel quel) est transmis à lectura-vc-zeroshot, qui l'applique par des vecteurs précalculés et interpolés. Aucun fichier audio de référence n'est accepté : ce paquet ne sert pas à imiter une personne.
+Après la conversion (rendue à 22 050 Hz), `samples` est rééchantillonné à 44 100 Hz et renormalisé (crête 0,9).
 
 **Filigrane.** Un son passé par le changement de timbre est produit par un réseau de neurones : il porte un filigrane IA inaudible (AudioSeal), posé par lectura-vc-zeroshot, et le paquet refuse une version de lectura-vc-zeroshot qui ne le garantit pas.
 

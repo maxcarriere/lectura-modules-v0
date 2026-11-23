@@ -59,6 +59,10 @@ result = analyser_phrase("Les enfants jouent.", syllabifier=True)   # necessite 
 print(result.format_ligne2())
 ```
 
+`aligner_pour_corpus()` (preparation des corpus d'entrainement) n'est pas disponible dans la v0 : elle reposait
+sur des outils internes absents de `lectura-aligneur` et leve `NotImplementedError`. Pour l'alignement
+grapheme-phoneme, utiliser `lectura_aligneur.LecturaSyllabeur`.
+
 ## Architecture
 
 - **Couche 1** : `lectura-phonemiseur` — modele G2P neural BiLSTM (poids telecharges au premier usage, voir « Modèles »)

@@ -48,7 +48,7 @@ SOUS_DOSSIER = "vc"
 DEPOT_HF = "lecturaworld/lectura-vc-zeroshot-v0"
 # Révision du dépôt : une branche, ou mieux un identifiant de commit une fois le
 # dépôt publié. Les empreintes ci-dessous protègent de toute façon le contenu.
-REVISION_HF = "8b61248e1040259354ed0c08efc311eceabf19fc"
+REVISION_HF = "77020c40378fb4afc06705292fbb4d9a0b6fb33a"
 
 # chemin dans le dépôt -> (sha256, taille en octets)
 FICHIERS: dict[str, tuple[str, int]] = {
@@ -218,6 +218,17 @@ def _telecharger_un(chemin_depot: str, dossier: Path) -> None:
                 pass
 
 
+
+def _signaler_telechargement() -> None:
+    """Demande ``config.json`` au dépôt (requête HEAD, sans effet si elle échoue) : Hugging Face ne compte un
+    téléchargement que sur ce fichier (https://huggingface.co/docs/hub/models-download-stats). Ajouté le 23/11/2026."""
+    try:
+        req = urllib.request.Request(url_fichier("config.json"), method="HEAD",
+                                     headers={"User-Agent": "lectura-modeles"})
+        urllib.request.urlopen(req, timeout=5).close()
+    except Exception:  # noqa: BLE001 — un simple comptage ne doit jamais gêner l'installation
+        pass
+
 def assurer(chemins: tuple[str, ...] | list[str], dossier: str | Path) -> Path:
     """Renvoie ``dossier`` après y avoir téléchargé les fichiers manquants de ``chemins``.
 
@@ -252,6 +263,7 @@ def assurer(chemins: tuple[str, ...] | list[str], dossier: str | Path) -> Path:
         dossier.mkdir(parents=True, exist_ok=True)
         for c in manquants:
             _telecharger_un(c, dossier)
+        _signaler_telechargement()
     except LecturaModelesIndisponibles:
         raise
     except (urllib.error.URLError, OSError, ValueError) as exc:

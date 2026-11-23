@@ -15,6 +15,7 @@ obligation de l'art. 50 de l'AI Act.
 from __future__ import annotations
 
 import logging
+import warnings
 from pathlib import Path
 
 import librosa
@@ -32,6 +33,21 @@ OV_N_FFT = 1024
 OV_HOP = 256
 OV_WIN = 1024
 OV_N_FREQ = OV_N_FFT // 2 + 1  # 513
+
+
+# -- tau : paramètre conservé pour compatibilité, sans effet ---------------------
+
+TAU_SANS_EFFET = (
+    "tau est sans effet : le modèle ONNX d'OpenVoice exporté pour ce paquet n'a pas "
+    "d'entrée tau (la conversion est déterministe). Le paramètre est gardé pour "
+    "compatibilité et sera retiré dans une version future ; ne le passez plus."
+)
+
+
+def avertir_tau(tau: float | None, stacklevel: int = 3) -> None:
+    """Émet un DeprecationWarning si ``tau`` est donné (il n'a aucun effet)."""
+    if tau is not None:
+        warnings.warn(TAU_SANS_EFFET, DeprecationWarning, stacklevel=stacklevel)
 
 
 # -- Spectrogram (numpy, matching OpenVoice's spectrogram_torch) ---------------
@@ -148,7 +164,7 @@ class OpenVoiceConverter:
         src_se: np.ndarray,
         tgt_se: np.ndarray,
         sr: int | None = None,
-        tau: float = 0.3,
+        tau: float | None = None,
     ) -> tuple[np.ndarray, int]:
         """Convert voice from source to target speaker.
 
@@ -158,7 +174,8 @@ class OpenVoiceConverter:
         src_se : source speaker embedding (1, 256, 1).
         tgt_se : target speaker embedding (1, 256, 1).
         sr : sample rate of source (auto if file path).
-        tau : conversion strength (0 = deterministic, higher = more variation).
+        tau : sans effet (le modèle ONNX n'a pas cette entrée ; conversion
+            déterministe). Gardé pour compatibilité : DeprecationWarning s'il est donné.
 
         Returns
         -------
@@ -170,6 +187,7 @@ class OpenVoiceConverter:
         ------
         FiligraneIndisponible : modèle du filigrane absent ou altéré ; aucun son non marqué n'est rendu.
         """
+        avertir_tau(tau)
         audio_np = self._load_audio(audio, sr)
         spec = compute_spectrogram(audio_np)  # (1, 513, T)
         spec_lengths = np.array([spec.shape[2]], dtype=np.int64)

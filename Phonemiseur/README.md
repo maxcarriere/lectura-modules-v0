@@ -22,7 +22,12 @@ puis gardes sur le disque ; ils sont sous licence CC BY-NC 4.0 (voir « Modèles
 
 ```bash
 pip install lectura-phonemiseur             # installe aussi onnxruntime et numpy
+pip install "lectura-phonemiseur[formules]" # + lectura-formules, requis par analyser_phrase_complete()
 ```
+
+`analyser_phrase_complete()` (phrase tokenisee avec formules : nombres, dates, heures...) a besoin de
+`lectura-formules` ; sans lui, l'importer leve une `ImportError` qui indique quoi installer. Le reste du paquet
+fonctionne sans.
 
 ### Utilisation rapide (factory — recommande)
 
@@ -33,12 +38,13 @@ from lectura_phonemiseur.tokeniseur import tokeniser
 # Premier appel : telecharge les poids (1,9 Mo) dans ~/.lectura/models/g2p/
 engine = creer_engine()
 
-tokens = tokeniser("Les enfants sont arrives a la maison.")
+tokens = tokeniser("Les enfants sont arrivés à la maison.")
 result = engine.analyser(tokens)
 
-print(result["g2p"])      # ['le', 'ɑ̃fɑ̃', 'sɔ̃', 'aʁive', 'a', 'la', 'mɛzɔ̃']
-print(result["pos"])      # ['ART:def', 'NOM', 'AUX', 'VER', 'PRE', 'ART:def', 'NOM']
-print(result["liaison"])  # ['Lz', 'none', 'Lt', 'none', 'none', 'none', 'none']
+# Une case par token, ponctuation comprise (le point final : phonétique vide)
+print(result["g2p"])      # ['le', 'ɑ̃fɑ̃', 'sɔ̃', 'aʁive', 'a', 'la', 'mɛzɔ̃', '']
+print(result["pos"])      # ['ART:def', 'NOM', 'AUX', 'VER', 'PRE', 'ART:def', 'NOM', 'NOM']
+print(result["liaison"])  # ['Lz', 'none', 'Lt', 'none', 'none', 'none', 'none', 'none']
 print(result["morpho"])   # {'Number': ['Plur', ...], 'Gender': [...], ...}
 ```
 
@@ -73,18 +79,22 @@ Les usages suivants n'utilisent plus le réseau.
 
 ## Backend d'inference
 
-Le paquet tourne avec ONNX Runtime (environ 2 ms par phrase sur CPU). Les backends NumPy et pur Python restent
-dans le code, mais demandent des poids convertis (`modeles_numpy/`) qui ne sont pas publiés.
+Le paquet tourne avec ONNX Runtime (environ 2 ms par phrase sur CPU). Les modes `"numpy"` et `"pure"` ne sont pas
+disponibles dans la v0 : ils demandent des poids convertis (JSON) qui ne sont pas publiés, et
+`creer_engine(mode="numpy")` ou `mode="pure"` lève une `ValueError` explicite.
 
 ## Features lexicales (optionnel)
 
 Le modele accepte en entree optionnelle un vecteur de 24 dimensions par mot, construit a partir d'un lexique de candidats POS. Cela ameliore la prediction POS, la morphologie et les liaisons.
 
-Le lexique est detecte automatiquement si `lectura-lexique` est installe, ou via le parametre `lexicon_path` de `creer_engine()`. Sans lexique, le modele fonctionne normalement (features = zeros).
+Aucun lexique n'est chargé par défaut. On peut en fournir un par le paramètre `lexicon_path` de `creer_engine()` : un fichier JSON `{"mot": ["NOM", "VER", ...]}` (catégories de Lexique 3). Mesure du 23/11/2026 sur le test du corpus du cadre (2 409 phrases) : l'aide est négligeable (+0,01 point de mots justes, +0,2 point sur les homographes). Sans lexique, le modèle fonctionne normalement (features = zéros).
 
 ```python
-# Avec lexique (automatique si lectura-lexique est installe)
+# Sans lexique (défaut)
 engine = creer_engine()
+
+# Avec un lexique de catégories fourni
+engine = creer_engine(lexicon_path="lexique_pos.json")
 
 # Desactiver les features lexicales
 result = engine.analyser(tokens, use_lex=False)
@@ -107,27 +117,41 @@ Les corrections stockent les separateurs dans l'IPA (`aba-ʒuʁ`, `d'abɔʁ`). Q
 
 ## Résultats
 
-Banc du 16/11/2026, en local sur CPU, sortie de la chaîne complète G2P v0 (`lectura-g2p`, qui utilise ce paquet).
-Référence : corpus d'évaluation de Lectura (phrases annotées en UD, phonétisées). Mots justes en neutralisant les
-différences de timbre (e/ɛ, o/ɔ, ø/œ) et ə/ø, puis en comparaison stricte ; PER = taux d'erreur sur les phonèmes.
+Bancs du 23/11/2026, en local sur CPU, avec le code publié (`lectura-g2p` 4.1.5, `lectura-phonemiseur` 4.1.11) et
+les poids publiés. Le même banc sert pour toutes les générations de Lectura ; espeak-ng 1.51 est mesuré comme point de
+comparaison extérieur.
 
-| Jeu | Mots justes (timbre + ə/ø) | Mots justes (strict) | PER |
-|---|---|---|---|
-| ParisStories, jamais vu à l'entraînement (697 phrases) | 99,14 % | 93,6 % | 1,84 % |
-| Test (2 409 phrases) | 98,97 % | 91,9 % | 2,07 % |
-| Hors domaine (3 289 phrases) | 98,00 % | 89,0 % | 1,70 % |
+**1. Lecture de phrases, référence humaine indépendante : CSF18.** 238 phrases françaises dont la transcription
+phonétique a été corrigée à la main. On mesure le taux d'erreur sur les phonèmes (PER), sur la meilleure des deux
+lectures enregistrées de chaque phrase, sans frontière de mot.
 
-Analyse grammaticale et liaisons, sur le test (2 409 phrases, ponctuation exclue), référence UD :
+| Système | PER strict | PER, timbres confondus (e/ɛ, o/ɔ, ø/œ) |
+|---|---|---|
+| **Lectura G2P v0** | **6,65 %** | **2,76 %** |
+| espeak-ng 1.51 | 12,85 % | 8,90 % |
 
-| | Score |
+Une grande part de l'écart strict vient du timbre propre au locuteur (« aux », « nos » prononcés avec ɔ). Ces phrases
+couvrent tous les sons du français mais contiennent peu d'homographes.
+
+CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022.
+
+**2. Corpus d'évaluation de Lectura** (phrases annotées en Universal Dependencies, test de 2 409 phrases). La
+référence phonétique vient d'un autre système de Lectura, avec ses conventions : à lire comme une indication.
+
+| | Lectura G2P v0 |
 |---|---|
-| Catégorie du mot (UPOS) | 94,6 % |
-| Les 6 traits morphologiques justes ensemble | 79,9 % |
-| Liaisons obligatoires faites | 85,9 % |
-| Liaisons interdites faites (à éviter) | 16,2 % |
+| Mots justes, strict | 91,9 % |
+| Mots justes, timbres et ə/ø confondus | 99,0 % |
+| PER strict | 4,4 % |
 
-Biais du banc : la référence phonétique et la référence des liaisons viennent d'un autre système de Lectura, avec
-ses propres conventions (d'où la colonne « timbre + ə/ø ») ; le dev UD a servi au choix du point de contrôle.
+**3. Analyse grammaticale**, test UD (2 409 phrases, ponctuation exclue), référence humaine UD (banc du 16/11, même
+modèle) : catégorie du mot (UPOS) 94,6 % ; les 6 traits morphologiques justes ensemble 79,9 %.
+
+Limites constatées :
+
+- les homographes au sens strict (« est », « fils »…) ne sont justes que dans 62 à 73 % des cas (comparaison stricte) ;
+- les liaisons obligatoires des inversions (« est-il ») sont souvent manquées ;
+- le modèle ne donne pas de lemme.
 
 ## Interface Python
 
@@ -137,7 +161,8 @@ Tokenise une phrase francaise (gestion apostrophes, ponctuation, contractions).
 
 ### `creer_engine(mode, models_dir, lexicon_path, corrections_lexique)`
 
-Factory pour creer un engine d'inference. Modes : `"auto"`, `"local"`, `"onnx"` (et `"numpy"`, `"pure"`, voir plus haut).
+Factory pour creer un engine d'inference. Modes : `"auto"` (defaut), `"local"`, `"onnx"` (tous trois : ONNX Runtime).
+Les modes `"numpy"` et `"pure"` levent `ValueError` dans la v0 (voir « Backend d'inference »).
 `models_dir` permet de specifier le dossier des modeles (sinon cascade automatique, puis telechargement au premier usage).
 `corrections_lexique=True` charge les corrections etendues du lexique (~30K entrees).
 

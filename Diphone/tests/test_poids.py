@@ -61,12 +61,12 @@ def faux_hf(monkeypatch, tmp_path):
 def test_url_par_defaut(monkeypatch):
     monkeypatch.delenv("LECTURA_HF_BASE", raising=False)
     assert _poids.url_fichier("diphones.dpk.gz") == (
-        "https://huggingface.co/lecturaworld/lectura-diphone-v0/resolve/main/diphones.dpk.gz")
+        "https://huggingface.co/lecturaworld/lectura-diphone-v0/resolve/" + _poids.REVISION_HF + "/diphones.dpk.gz")
 
 
 def test_url_surchargee(monkeypatch):
     monkeypatch.setenv("LECTURA_HF_BASE", "http://127.0.0.1:9/")
-    assert _poids.url_fichier("x") == "http://127.0.0.1:9/lecturaworld/lectura-diphone-v0/resolve/main/x"
+    assert _poids.url_fichier("x") == "http://127.0.0.1:9/lecturaworld/lectura-diphone-v0/resolve/" + _poids.REVISION_HF + "/x"
 
 
 def test_table_des_empreintes():

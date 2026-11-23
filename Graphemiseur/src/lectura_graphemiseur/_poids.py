@@ -37,7 +37,7 @@ SOUS_DOSSIER = "p2g"
 DEPOT_HF = "lecturaworld/lectura-p2g-v0"
 # Révision du dépôt : une branche, ou mieux un identifiant de commit une fois le
 # dépôt publié. Les empreintes ci-dessous protègent de toute façon le contenu.
-REVISION_HF = "cfdbb431e70d291fe674d9357e31ccdee712a527"
+REVISION_HF = "e445a3095c27ba3b8b905f2ba485eaaff0bdddf8"
 
 # fichier -> (sha256, taille en octets)
 FICHIERS: dict[str, tuple[str, int]] = {
@@ -47,14 +47,6 @@ FICHIERS: dict[str, tuple[str, int]] = {
         "833baf2abdc0715a86f02d60c4e0ead5514ffb54163bcfbc72199c38885fbf69", 27291),
     "phone_lexicon.db": (
         "b88764c088b571003cb9d026d942fa6ce9f1a2697e1bb51874802f219dbf3ae4", 29192192),
-    "correcteur_p2g_char_encoder_int8.onnx": (
-        "119097fbe8c0bbe0b7655c2e546066e3203373d0aca834d2b8fe596a64e98380", 618175),
-    "correcteur_p2g_word_context_int8.onnx": (
-        "f8a7809a938b17ccaf210bfaab5138b3ffed418fd255f4d4645e200086fd690f", 1036357),
-    "correcteur_p2g_decoder_step_int8.onnx": (
-        "49f4ae2105170b583a226873bcc3a0dd159fb1e8b156a01073df3a584b02ba99", 1167001),
-    "correcteur_p2g_vocab.json": (
-        "df6916f5ab64d61d55a304fdad7b565bcbbeb7989ecaa57b063bb57eb3e91850", 1404),
 }
 
 # Tables de données (pas des poids) : CC BY-SA 4.0, voir le NOTICE du paquet.
@@ -182,6 +174,17 @@ def _telecharger_un(nom: str, dossier: Path) -> None:
                 pass
 
 
+
+def _signaler_telechargement() -> None:
+    """Demande ``config.json`` au dépôt (requête HEAD, sans effet si elle échoue) : Hugging Face ne compte un
+    téléchargement que sur ce fichier (https://huggingface.co/docs/hub/models-download-stats). Ajouté le 23/11/2026."""
+    try:
+        req = urllib.request.Request(url_fichier("config.json"), method="HEAD",
+                                     headers={"User-Agent": "lectura-modeles"})
+        urllib.request.urlopen(req, timeout=5).close()
+    except Exception:  # noqa: BLE001 — un simple comptage ne doit jamais gêner l'installation
+        pass
+
 def assurer_modeles(models_dir: str | Path | None = None) -> Path:
     """Renvoie le dossier des poids, après les avoir téléchargés s'ils manquent.
 
@@ -218,6 +221,7 @@ def assurer_modeles(models_dir: str | Path | None = None) -> Path:
         dossier.mkdir(parents=True, exist_ok=True)
         for nom in manquants:
             _telecharger_un(nom, dossier)
+        _signaler_telechargement()
     except LecturaModelesIndisponibles:
         raise
     except (urllib.error.URLError, OSError, ValueError) as exc:

@@ -21,14 +21,14 @@ pip install lectura-aligneur
 | Fonction | Description |
 |----------|-------------|
 | **Alignement grapheme-phoneme** | Correspondance lettre-par-lettre entre orthographe et IPA via algorithme DFS |
-| **Lettres muettes** | Detection et marquage des lettres silencieuses (e, s, t, d, h, x...) |
-| **Lettres fusionnees** | Identification des graphemes multi-phonemes (x = ks/gz, y...) |
+| **Lettres muettes** | Detection et marquage des lettres silencieuses (e, s, t, d, h, x...), marquees `°` dans l'orthographe des syllabes |
+| **Lettres fusionnees** | Identification des graphemes multi-phonemes (x = ks/gz, y...), marquees `²` dans l'orthographe des syllabes |
 | **Groupes de lecture** | Accepte les groupes pre-construits par le phonemiseur (elision, liaison, enchainement) |
 | **Syllabation phonologique** | Decoupage en syllabes par modele de sonorite (IPA + orthographe) |
 | **Decomposition attaque/noyau/coda** | Chaque syllabe decomposee en ses constituants avec phonemes distribues |
 | **Spans** | Positions caractere de chaque syllabe, groupe et composant dans le texte source |
 | **Phonemiseur pluggable** | eSpeak-NG (defaut), Lectura G2P, ou tout objet avec `.phonemize()` / `.predict()` |
-| **Formules** | Gestion des lectures de formules (nombres, dates, etc.) avec events alignes |
+| **Formules** | Gestion des lectures de formules (nombres, dates, etc.) avec events alignes : parametre `lectures_formules` d'`analyser_complet()` (index de **mot** -> `LectureFormule`), groupes marques `est_formule` |
 
 ## Exemples
 
@@ -41,10 +41,10 @@ syllabeur = LecturaSyllabeur()    # eSpeak-NG par defaut
 result = syllabeur.analyze("chocolat")
 
 print(result.format_detail())
-# chocolat -> /ʃɔkɔla/
-#   σ1: /ʃɔ/ <<cho>> [0:3] att=ʃ noy=ɔ cod=-
-#   σ2: /kɔ/ <<co>>  [3:5] att=k noy=ɔ cod=-
-#   σ3: /la/ <<lat>>  [5:8] att=l noy=a cod=-
+# chocolat -> /ʃokola/            (sortie avec eSpeak NG 1.51 ; elle depend du phonemiseur)
+#   σ1: /ʃo/ <<cho>> [0:3] att=ʃ noy=o cod=-
+#   σ2: /ko/ <<co>> [3:5] att=k noy=o cod=-
+#   σ3: /la/ <<lat°>> [5:8] att=l noy=a cod=-
 
 # Chaque syllabe expose son alignement :
 for s in result.syllabes:
@@ -52,28 +52,53 @@ for s in result.syllabes:
     noy = " ".join(f"{p.ipa}→{p.grapheme}" for p in s.noyau.phonemes)
     cod = " ".join(f"{p.ipa}→{p.grapheme}" for p in s.coda.phonemes)
     print(f"  {s.ortho:6s} /{s.phone}/  att=[{att}] noy=[{noy}] cod=[{cod}]  span={s.span}")
-# cho    /ʃɔ/  att=[ʃ→ch] noy=[ɔ→o] cod=[]  span=(0, 3)
-# co     /kɔ/  att=[k→c]  noy=[ɔ→o] cod=[]  span=(3, 5)
-# lat    /la/  att=[l→l]  noy=[a→a] cod=[]   span=(5, 8)
+# cho    /ʃo/  att=[ʃ→ch] noy=[o→o] cod=[]  span=(0, 3)
+# co     /ko/  att=[k→c] noy=[o→o] cod=[]  span=(3, 5)
+# lat°   /la/  att=[l→l] noy=[a→at] cod=[]  span=(5, 8)
 ```
+
+### Marques dans l'orthographe des syllabes
+
+L'orthographe affichee (`Syllabe.ortho`, `format_detail()`) porte deux marques :
+
+| Marque | Sens | Exemple |
+|--------|------|---------|
+| `°` | la lettre qui precede est **muette** | `lat°` (chocolat), `grande°s°` (grandes), `joue°n°t°` (jouent) |
+| `²` | **lettre fusionnee** : une meme lettre produit deux phonemes | `x²` dans taxi (/ks/), examen (/ɡz/) |
+
+Les marques ne figurent que dans `ortho` ; les graphemes des phonemes (`Phoneme.grapheme`) et les `span` portent
+sur le texte d'origine. Pour un affichage sans marque : `s.ortho.replace("°", "").replace("²", "")`.
 
 ### Analyse complete avec groupes de lecture
 
-L'API `analyser_complet()` prend une liste de `MotAnalyse` (produite par le G2P) et construit les groupes de lecture en appliquant liaisons, enchainements et elisions, puis syllabe chaque groupe :
+`analyser_complet()` construit les groupes de lecture (liaisons, enchainements, elisions) puis syllabe chaque
+groupe. La construction des groupes est faite par **`lectura-phonemiseur`**, qui doit etre installe
+(`pip install lectura-phonemiseur`) ; sans lui, `analyser_complet(mots)` leve `RuntimeError`.
+
+Les mots sont lus par duck typing : tout objet avec les attributs `text`, `phone` et `liaison` convient
+(par exemple les `MotAnalyseG2P` produits par `lectura_phonemiseur.analyser_phrase_complete()`). Les codes de
+liaison sont `Lz`, `Lt`, `Ln`, `Lr`, `Lp` ou `none`.
 
 ```python
-from lectura_aligneur import LecturaSyllabeur, MotAnalyse
+from dataclasses import dataclass
+
+from lectura_aligneur import LecturaSyllabeur
+
+@dataclass
+class Mot:
+    text: str
+    phone: str
+    liaison: str = "none"
 
 syllabeur = LecturaSyllabeur()
 
-# Mots annotes par le G2P (phone + liaison)
 mots = [
-    MotAnalyse(phone="lez", liaison="Lz"),   # les (liaison en z)
-    MotAnalyse(phone="ɑ̃fɑ̃", liaison="none"),  # enfants
-    MotAnalyse(phone="ʒu",  liaison="none"),   # jouent
+    Mot("les", "lez", liaison="Lz"),   # les (liaison en z)
+    Mot("enfants", "ɑ̃fɑ̃"),
+    Mot("jouent", "ʒu"),
 ]
 
-result = syllabeur.analyser_complet(mots)
+result = syllabeur.analyser_complet(mots)   # requiert lectura-phonemiseur
 
 print(f"{result.nb_groupes} groupes, {result.nb_syllabes} syllabes")
 print(f"Groupes : {result.format_ligne1()}")
@@ -90,6 +115,12 @@ for rg in result.groupes:
     print(f"  Groupe: /{g.phone_groupe}/  jonctions: {jonc}")
     for s in rg.syllabes:
         print(f"    σ /{s.phone}/ <<{s.ortho}>>  att={s.attaque.phone or '-'} noy={s.noyau.phone} cod={s.coda.phone or '-'}")
+#   Groupe: /lezɑ̃fɑ̃/  jonctions: liaison_z
+#     σ /le/ <<le>>  att=l noy=e cod=-
+#     σ /zɑ̃/ <<sen>>  att=z noy=ɑ̃ cod=-
+#     σ /fɑ̃/ <<fant°s°>>  att=f noy=ɑ̃ cod=-
+#   Groupe: /ʒu/  jonctions: -
+#     σ /ʒu/ <<joue°n°t°>>  att=ʒ noy=u cod=-
 ```
 
 ### API IPA directe (sans phonemiseur)
@@ -128,7 +159,7 @@ result = syllabeur.analyze("maison")
 | `Syllabe` | Syllabe : `phone`, `ortho`, `span`, `attaque`, `noyau`, `coda` |
 | `GroupePhonologique` | Attaque/noyau/coda : liste de `Phoneme` avec `ipa` + `grapheme` |
 | `Phoneme` | Phoneme individuel : `ipa` (ex: "ʃ") + `grapheme` (ex: "ch") |
-| `MotAnalyse` | Mot annote : `token`, `phone`, `liaison`, `pos` |
+| Mot (duck typing) | Tout objet avec `text`, `phone`, `liaison` (ex. `MotAnalyseG2P` de `lectura-phonemiseur`) |
 | `GroupeLecture` | Groupe de lecture : `mots[]`, `phone_groupe`, `jonctions[]`, `span` |
 | `ResultatGroupe` | Groupe syllabe : `groupe` + `syllabes[]` |
 | `ResultatSyllabation` | Resultat complet : `groupes[]`, `nb_syllabes`, `nb_groupes` |

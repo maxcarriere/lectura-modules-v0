@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectura-phonemiseur"
-version = "4.1.11"
+version = "4.2.0"
 description = "Phonémiseur neural du français — G2P + POS + Morpho + Liaison + Groupes de lecture (BiLSTM multi-tâche)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,9 +33,9 @@ dependencies = ["onnxruntime>=1.16", "numpy>=1.24"]
 [project.optional-dependencies]
 onnx = ["onnxruntime>=1.16"]
 numpy = ["numpy>=1.24"]
-lexique = ["lectura-lexique>=1.5.4"]
+formules = ["lectura-formules>=3.8.0"]   # requis par analyser_phrase_complete()
 train = ["torch>=2.0", "onnx>=1.14", "onnxruntime>=1.16"]
-all = ["onnxruntime>=1.16", "numpy>=1.24", "lectura-lexique>=1.5.4"]
+all = ["onnxruntime>=1.16", "numpy>=1.24", "lectura-formules>=3.8.0"]
 
 [project.urls]
 Homepage = "https://www.lectura.world/developpement/modules/"

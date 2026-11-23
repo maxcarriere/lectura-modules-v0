@@ -61,14 +61,12 @@ def faux_hf(monkeypatch, tmp_path):
 def test_url_par_defaut(monkeypatch):
     monkeypatch.delenv("LECTURA_HF_BASE", raising=False)
     assert _poids.url_fichier("unifie_p2g_v7_int8.onnx") == (
-        "https://huggingface.co/lecturaworld/lectura-p2g-v0/resolve/main/unifie_p2g_v7_int8.onnx")
+        "https://huggingface.co/lecturaworld/lectura-p2g-v0/resolve/" + _poids.REVISION_HF + "/unifie_p2g_v7_int8.onnx")
 
 
 def test_table_des_empreintes():
     assert set(_poids.FICHIERS) == {
         "unifie_p2g_v7_int8.onnx", "unifie_p2g_v7_vocab.json", "phone_lexicon.db",
-        "correcteur_p2g_char_encoder_int8.onnx", "correcteur_p2g_word_context_int8.onnx",
-        "correcteur_p2g_decoder_step_int8.onnx", "correcteur_p2g_vocab.json",
     }
     for sha, taille in _poids.FICHIERS.values():
         assert len(sha) == 64 and int(sha, 16) >= 0 and taille > 0

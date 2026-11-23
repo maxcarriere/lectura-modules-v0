@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectura-lexique"
-version = "1.5.4"
+version = "1.6.0"
 description = "French lexical database access — lemmas, inflected forms with IPA phonetics and syllabification (database not included)"
 readme = "README.md"
 requires-python = ">=3.10"

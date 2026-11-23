@@ -15,8 +15,10 @@ changement de timbre (``voix=...``) porte en plus le filigrane IA de
 lectura-vc-zeroshot. Ne retirez pas le marquage.
 
 Exports publics :
-    - creer_engine(g2p, models_dir) → DiphoneEngine
+    - creer_engine(mode, g2p, models_dir) → DiphoneEngine
     - synthetiser(texte, **kwargs) → DiphoneResult (.samples float32 @ 44100 Hz, .vers_wav())
+      (le moteur est gardé en mémoire d'un appel à l'autre, par models_dir et g2p)
+    - DiphoneEngine, SynthMode, DiphoneResult, PhonemeTiming
     - ecrire_wav(chemin, audio, sr) → octets WAV marqués
     - TIMBRES_VOIX : timbres du changement de timbre ("fr-f1", "melange-f", "melange-h")
 """
@@ -24,6 +26,7 @@ Exports publics :
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -40,10 +43,52 @@ def __getattr__(nom: str):
 
 log = logging.getLogger(__name__)
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 # Timbres du changement de timbre (identifiants neutres ; voir _retimbre.TIMBRES).
 TIMBRES_VOIX = ("fr-f1", "melange-f", "melange-h")
+
+
+def _verifier_mode(mode: str) -> None:
+    if mode not in ("auto", "local"):
+        raise ValueError(
+            f"Mode inconnu : {mode!r}. Seuls \"auto\" et \"local\" existent : "
+            "le mode \"api\" a été retiré, tout tourne en local. (Le mode de "
+            "synthèse FLUIDE / MOT_A_MOT / SYLLABES s'appelle synth_mode dans "
+            "synthetiser().)"
+        )
+
+
+# Moteurs gardés en mémoire par synthetiser() : clé (dossier de la banque, id du g2p)
+# -> (g2p, moteur). Le moteur ne garde aucun état qui change le son d'un appel à
+# l'autre (la graine est reposée à chaque synthèse) : mêmes sorties qu'un moteur neuf.
+_MOTEURS: dict[tuple[str, int], tuple[Any, Any]] = {}
+_MOTEURS_MAX = 4
+_MOTEURS_VERROU = threading.Lock()
+
+
+def _moteur_en_cache(mode: str, g2p: Any, models_dir: str | Path | None):
+    """Moteur de synthetiser() : réutilisé pour le même dossier de banque et le même g2p."""
+    from lectura_diphone._poids import dossier_destination
+
+    _verifier_mode(mode)
+    cle = (str(dossier_destination(models_dir).resolve()), id(g2p))
+    with _MOTEURS_VERROU:
+        trouve = _MOTEURS.get(cle)
+        if trouve is not None and trouve[0] is g2p:
+            return trouve[1]
+        engine = creer_engine(mode=mode, g2p=g2p, models_dir=models_dir)
+        if engine._g2p_backend is not None:   # sans G2P : rien à garder
+            if len(_MOTEURS) >= _MOTEURS_MAX:
+                _MOTEURS.pop(next(iter(_MOTEURS)))
+            _MOTEURS[cle] = (g2p, engine)
+        return engine
+
+
+def vider_cache() -> None:
+    """Oublie les moteurs gardés par synthetiser() (rend la mémoire de la banque)."""
+    with _MOTEURS_VERROU:
+        _MOTEURS.clear()
 
 
 def creer_engine(
@@ -80,11 +125,7 @@ def creer_engine(
     LecturaModelesIndisponibles
         Si la banque manque et ne peut pas être téléchargée.
     """
-    if mode not in ("auto", "local"):
-        raise ValueError(
-            f"Mode inconnu : {mode!r}. Seuls \"auto\" et \"local\" existent : "
-            "le mode \"api\" a été retiré, tout tourne en local."
-        )
+    _verifier_mode(mode)
     try:
         import numpy  # noqa: F401
         import pyworld  # noqa: F401
@@ -138,7 +179,7 @@ def synthetiser(
     # -- Changement de timbre (OpenVoice, via lectura-vc-zeroshot) --
     voix: str | None = None,
     voix_variante: float = 0.0,
-    voix_tau: float = 0.3,
+    voix_tau: float | None = None,
     vc_models_dir: str | Path | None = None,
 ) -> Any:
     """Texte → DiphoneResult (audio float32 mono @ 44100 Hz et timings).
@@ -146,15 +187,21 @@ def synthetiser(
     ``resultat.samples`` est le tableau numpy ; ``resultat.vers_wav(chemin)``
     écrit un WAV avec les métadonnées IA (à préférer pour tout fichier diffusé).
 
+    Le moteur (banque de diphones, et moteur de conversion si ``voix=``) est
+    créé au premier appel puis gardé en mémoire pour les appels suivants avec
+    le même ``models_dir`` et le même ``g2p`` ; ``vider_cache()`` le libère.
+    Les sorties sont identiques à celles d'un moteur neuf.
+
     Parameters
     ----------
     texte : str
         Texte français à synthétiser (demande un G2P local :
         pip install "lectura-diphone[g2p]", ou ``g2p=``).
     mode, models_dir, g2p :
-        Paramètres de creer_engine().
+        Paramètres de creer_engine() (``mode`` : "auto" ou "local" seulement).
     synth_mode : str
-        "FLUIDE", "MOT_A_MOT" ou "SYLLABES".
+        Mode de synthèse : "FLUIDE", "MOT_A_MOT" ou "SYLLABES" (appelé
+        ``mode`` dans ``DiphoneEngine.synthesize_groups``).
     duration_scale : float
         Facteur de vitesse (>1 = plus lent).
     pause_scale : float
@@ -170,9 +217,11 @@ def synthetiser(
         "regles" (défaut, règles LHiLH*) ou "corpus" (contours tirés du
         corpus SIWIS, plus variés).
     ap_cleanup : float
-        Compression de l'apériodicité (1.0 = off, 1.5 = défaut, max 3.0).
+        Compression de l'apériodicité (1.0 = off, 1.5 = défaut, max 3.0 ;
+        au-delà, ramené à 3.0 avec un avertissement).
     formant_sharpening : float
-        Affûtage des formants (1.0 = off, 1.3 = défaut, max 2.0).
+        Affûtage des formants (1.0 = off, 1.3 = défaut, max 2.0 ; au-delà,
+        ramené à 2.0 avec un avertissement).
     vtln_alpha : float
         Déformation VTLN (0.8 = grave, 1.0 = neutre, 1.2 = aigu).
     timbre : str | None
@@ -190,8 +239,10 @@ def synthetiser(
         Requires: pip install "lectura-diphone[vc]"
     voix_variante : float
         Curseur -1 (grave) à +1 (aigu) du changement de timbre.
-    voix_tau : float
-        Paramètre tau d'OpenVoice (0 = déterministe, 0.3 = défaut).
+    voix_tau : None
+        Sans effet (le modèle ONNX d'OpenVoice n'a pas d'entrée tau ; la
+        conversion est déterministe). Gardé pour compatibilité :
+        DeprecationWarning s'il est donné.
     vc_models_dir : str | Path | None
         Dossier des modèles de lectura-vc-zeroshot (défaut : détection).
 
@@ -201,7 +252,10 @@ def synthetiser(
         ``samples`` (float32 mono, 44100 Hz), ``sample_rate``,
         ``phoneme_timings``, ``timbre_converti``.
     """
-    engine = creer_engine(mode=mode, g2p=g2p, models_dir=models_dir)
+    from lectura_diphone.engine import _avertir_voix_tau
+
+    _avertir_voix_tau(voix_tau)
+    engine = _moteur_en_cache(mode, g2p, models_dir)
     if engine._g2p_backend is None:
         from lectura_diphone.g2p import auto_detect_g2p
         auto_detect_g2p()  # lève l'ImportError explicite
@@ -224,7 +278,6 @@ def synthetiser(
         sentence_pause_ms=sentence_pause_ms,
         voix=voix,
         voix_variante=voix_variante,
-        voix_tau=voix_tau,
         vc_models_dir=vc_models_dir,
     )
 
@@ -234,6 +287,9 @@ __all__ = [
     "synthetiser",
     "ecrire_wav",
     "TIMBRES_VOIX",
+    "vider_cache",
+    "DiphoneEngine",
+    "SynthMode",
     "DiphoneResult",
     "PhonemeTiming",
     "LecturaModelesIndisponibles",

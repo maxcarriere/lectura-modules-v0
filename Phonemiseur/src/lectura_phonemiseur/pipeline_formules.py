@@ -3,7 +3,9 @@
 Orchestre le traitement : mots normaux via modèle neural,
 formules via lecture algorithmique (lecture_formules.py).
 
-Licence : CC-BY-SA-4.0
+Copyright (C) 2025-2026 Maxime Carrière (Lectura)
+Licence : AGPL-3.0-or-later — voir LICENCE.txt
+Licence commerciale disponible — contact via https://www.lectura.world
 """
 
 from __future__ import annotations

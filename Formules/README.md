@@ -71,8 +71,38 @@ if wav:
 | `lire_fraction(texte)` | Fractions : "3/4" -> "trois-quarts" |
 | `lire_monnaie(texte)` | Monnaies : "42 EUR" -> "quarante-deux-euros" |
 | `lire_pourcentage(texte)` | Pourcentages : "50%" -> "cinquante-pour cent" |
+| `lire_intervalle(texte)` | Intervalles : "[0 ; 1]" -> "de-zéro-à-un" |
+| `lire_romain(texte)` | Nombres romains lus comme cardinaux : "XIV" -> "quatorze" |
+| `lire_abv(texte)` | Abréviations : "M." -> "monsieur" (sinon épelées) |
+| `lire_unite(texte)` | Unités : "km/h" -> "kilomètre-par-heure" |
+| `lire_scientifique`, `lire_maths`, `lire_numero`, `lire_gps`, `lire_page_chapitre` | Autres types, aussi accessibles par `lire_formule` |
 | `enrichir_formules(tokens)` | Enrichit les tokens FORMULE d'une phrase tokenisee |
 | `int_to_roman(n)` / `roman_to_int(s)` | Chiffres romains |
+
+`lire_formule` accepte 18 types : nombre, sigle, date, telephone, ordinal, fraction, scientifique, maths, numero,
+heure, monnaie, pourcentage, intervalle, gps, page_chapitre, romain, abv, unite (un type inconnu est épelé).
+
+Heures : les minutes nulles ne sont pas lues ("14h00" -> "quatorze-heures") ; avec
+`OptionsLecture(heure_minuit_midi=True)`, "12h00" -> "midi" et "0h00" -> "minuit".
+
+### Options (`OptionsLecture`)
+
+| Option | Défaut | Effet |
+|---|---|---|
+| `fraction_mode` | `"hybride"` | `"hybride"`, `"ordinal"` ou `"standard"` |
+| `decimal_method` | `"m2"` | partie décimale : `"m1"` (comme un entier), `"m2"` (groupes de 3), `"m3"` (chiffre par chiffre) |
+| `heure_mot_minutes` | `False` | dire « minutes » après les heures (« 14h30 ») |
+| `heure_minuit_midi` | `False` | 0h -> « minuit », 12h -> « midi » |
+| `monnaie_dire_centimes` | `True` | lire les centimes |
+| `romain_actif` | `True` | calculer `display_rom` pour les nombres |
+| `auto_convert_sci` | `False` | convertir décimal <-> scientifique |
+
+### Reconnaissance (phonétique -> formule)
+
+`reconnaitre_ipa`, `reconnaitre_ipa_stt` (tolérant aux erreurs de transcription), `detect_number_spans`,
+`detect_sigle_spans`, `detect_formule_spans_stt`, `detect_formula_spans` et `reconnaitre_maths_ipa*` repèrent les
+formules dans une suite de mots en API ; `lectura-p2g` s'en sert. Le connecteur « et » (/e/, /ɛ/) n'est gardé qu'à
+l'intérieur d'une formule (« vingt et un ») : en bord, c'est un mot de la phrase (« il est quinze heures »).
 
 ## Licence
 

@@ -166,7 +166,7 @@ class RetimbreEngine:
         sr: int,
         reference: str,
         variante: float = 0.0,
-        tau: float = 0.3,
+        tau: float | None = None,
     ) -> tuple[np.ndarray, int]:
         """Applique le changement de timbre.
 
@@ -176,7 +176,8 @@ class RetimbreEngine:
         sr : fréquence d'échantillonnage de la source.
         reference : identifiant de timbre (``"fr-f1"``, ``"melange-f"``, ``"melange-h"``).
         variante : curseur -1 (grave) à +1 (aigu).
-        tau : paramètre d'OpenVoice (0 = déterministe).
+        tau : ignoré (sans effet dans lectura-vc-zeroshot : le modèle ONNX n'a
+            pas cette entrée) ; n'est plus transmis.
 
         Returns
         -------
@@ -187,11 +188,11 @@ class RetimbreEngine:
         engine = self._ensure_loaded()
         # curseur : 0 sous 0,01 (comme variante_to_sr_override), borné à [-1, 1]
         variante = 0.0 if abs(variante) < 0.01 else float(np.clip(variante, -1.0, 1.0))
-        logger.info("Retimbre : voix=%s, variante=%.2f, tau=%.2f", voix, variante, tau)
+        logger.info("Retimbre : voix=%s, variante=%.2f", voix, variante)
 
         tgt_se = self._get_tgt_se(engine, voix, variante)
         src_se = engine.extract_se(audio, sr=sr)
         # convert_from_se -> OpenVoiceConverter.convert -> _filigrane.marquer (filigrane IA)
         return engine.convert_from_se(
-            audio=audio, src_se=src_se, tgt_se=tgt_se, sr_in=sr, tau=tau,
+            audio=audio, src_se=src_se, tgt_se=tgt_se, sr_in=sr,
         )

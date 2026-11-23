@@ -37,7 +37,7 @@ SOUS_DOSSIER = "g2p"
 DEPOT_HF = "lecturaworld/lectura-g2p-v0"
 # Révision du dépôt : une branche, ou mieux un identifiant de commit une fois le
 # dépôt publié. Les empreintes ci-dessous protègent de toute façon le contenu.
-REVISION_HF = "b14192822c2252d478092f876d09bd504133a926"
+REVISION_HF = "2313aef46ea343256f28ad7a5431c72084efea6b"
 
 # fichier -> (sha256, taille en octets)
 FICHIERS: dict[str, tuple[str, int]] = {
@@ -172,6 +172,17 @@ def _telecharger_un(nom: str, dossier: Path) -> None:
                 pass
 
 
+
+def _signaler_telechargement() -> None:
+    """Demande ``config.json`` au dépôt (requête HEAD, sans effet si elle échoue) : Hugging Face ne compte un
+    téléchargement que sur ce fichier (https://huggingface.co/docs/hub/models-download-stats). Ajouté le 23/11/2026."""
+    try:
+        req = urllib.request.Request(url_fichier("config.json"), method="HEAD",
+                                     headers={"User-Agent": "lectura-modeles"})
+        urllib.request.urlopen(req, timeout=5).close()
+    except Exception:  # noqa: BLE001 — un simple comptage ne doit jamais gêner l'installation
+        pass
+
 def assurer_modeles(models_dir: str | Path | None = None) -> Path:
     """Renvoie le dossier des poids, après les avoir téléchargés s'ils manquent.
 
@@ -208,6 +219,7 @@ def assurer_modeles(models_dir: str | Path | None = None) -> Path:
         dossier.mkdir(parents=True, exist_ok=True)
         for nom in manquants:
             _telecharger_un(nom, dossier)
+        _signaler_telechargement()
     except LecturaModelesIndisponibles:
         raise
     except (urllib.error.URLError, OSError, ValueError) as exc:

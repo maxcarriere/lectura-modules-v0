@@ -72,9 +72,9 @@ def engine(tmp_path_factory):
                 os.environ[k] = v
 
 
-def test_moteur_onnx_et_correcteur(engine):
+def test_moteur_onnx(engine):
     assert "Onnx" in type(engine).__name__
-    assert engine.correcteur is not None
+    assert getattr(engine, "correcteur", None) is None  # correcteur neuronal retiré le 23/11/2026
     assert engine.phone_lexicon is not None
 
 

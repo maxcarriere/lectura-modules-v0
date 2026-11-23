@@ -24,7 +24,7 @@ from pathlib import Path
 from lectura_phonemiseur import _poids
 from lectura_phonemiseur._poids import LecturaModelesIndisponibles
 
-__version__ = "4.1.11"
+__version__ = "4.2.0"
 
 _MODELES_DIR = Path(__file__).parent / "modeles"
 
@@ -73,25 +73,13 @@ def _resoudre_lexique(
     """Cascade de resolution du lexique pour les lex_features.
 
     1. Chemin explicite (si passe)
-    2. lectura_lexique installe -> generer le dict
-    3. None (pas de lexique -> lex_features = zeros)
+    2. None (pas de lexique -> lex_features = zeros)
     """
     if lexicon_path is not None:
         return lexicon_path
-    try:
-        from lectura_lexique import Lexique
-        lex = Lexique()
-        result: dict[str, list[str]] = {}
-        for mot, entrees in lex._index.items():
-            pos_set: set[str] = set()
-            for e in entrees:
-                if hasattr(e, "pos") and e.pos:
-                    pos_set.add(e.pos)
-            if pos_set:
-                result[mot] = sorted(pos_set)
-        return result
-    except (ImportError, Exception):
-        pass
+    # Plus de construction automatique depuis lectura-lexique (retirée le 23/11/2026) : sans base fournie par
+    # l'utilisateur, elle échouait toujours en silence ; mesurée avec un lexique fourni, l'aide est négligeable
+    # (+0,01 point de mots justes sur le test du cadre). Un lexique de catégories reste utilisable par lexicon_path.
     return None
 
 
@@ -157,9 +145,10 @@ def creer_engine(
     Parameters
     ----------
     mode : str
-        "auto" (defaut) ou "local" : ONNX > NumPy > Pure
-        "onnx", "numpy", "pure" : force un backend local specifique
-        (le mode "api" n'existe plus : tout tourne en local)
+        "auto" (defaut), "local" ou "onnx" : ONNX Runtime, en local.
+        Les modes "numpy" et "pure" ne sont pas disponibles dans la v0 : ils
+        demandent des poids convertis (JSON) qui ne sont pas publies ; ils
+        levent ValueError. Le mode "api" n'existe plus.
     models_dir : str | Path | None
         Chemin vers le dossier contenant les modeles. Si None, cascade
         automatique : LECTURA_MODELS_DIR → ~/.lectura/models/g2p/ → site-packages.
@@ -178,7 +167,13 @@ def creer_engine(
             "Le mode 'api' a ete retire : lectura-phonemiseur tourne en local, avec des "
             "poids telecharges depuis Hugging Face au premier usage. Utilisez mode='auto'."
         )
-    if mode not in ("auto", "local", "onnx", "numpy", "pure"):
+    if mode in ("numpy", "pure"):
+        raise ValueError(
+            f"Le mode {mode!r} n'est pas disponible dans la v0 : il demande des poids "
+            "convertis (JSON) qui ne sont pas publies. Utilisez mode='auto' ou 'onnx' "
+            "(ONNX Runtime, installe avec le paquet)."
+        )
+    if mode not in ("auto", "local", "onnx"):
         raise ValueError(f"Mode inconnu : {mode!r}")
 
     resolved_dir = _resoudre_modeles_dir(models_dir)
@@ -205,39 +200,9 @@ def creer_engine(
                     str(model_onnx), str(model_vocab),
                     lexicon_path=str(resolved_lexicon) if resolved_lexicon else None,
                 )
-        except Exception as exc:  # repli NumPy / pur Python ; cause gardee pour l'erreur finale
+        except Exception as exc:  # cause gardee pour l'erreur finale
             erreur_onnx = exc
             if mode == "onnx":
-                raise
-
-    if engine is None and mode in ("auto", "local", "numpy"):
-        try:
-            from lectura_phonemiseur.inference_numpy import NumpyInferenceEngine
-            weights_dir = Path(__file__).parent / "modeles_numpy"
-            if not weights_dir.exists():
-                weights_dir = resolved_dir if resolved_dir else _MODELES_DIR
-            engine = NumpyInferenceEngine(
-                str(weights_dir), str(model_vocab),
-                lexicon_path=str(resolved_lexicon) if isinstance(resolved_lexicon, Path) else None,
-                lexicon=resolved_lexicon if isinstance(resolved_lexicon, dict) else None,
-            )
-        except (ImportError, FileNotFoundError, Exception):
-            if mode == "numpy":
-                raise
-
-    if engine is None and mode in ("auto", "local", "pure"):
-        try:
-            from lectura_phonemiseur.inference_pure import PureInferenceEngine
-            weights_dir = Path(__file__).parent / "modeles_numpy"
-            if not weights_dir.exists():
-                weights_dir = resolved_dir if resolved_dir else _MODELES_DIR
-            engine = PureInferenceEngine(
-                str(weights_dir), str(model_vocab),
-                lexicon_path=str(resolved_lexicon) if isinstance(resolved_lexicon, Path) else None,
-                lexicon=resolved_lexicon if isinstance(resolved_lexicon, dict) else None,
-            )
-        except (ImportError, FileNotFoundError, Exception):
-            if mode == "pure":
                 raise
 
     if engine is None:
@@ -260,14 +225,28 @@ from lectura_phonemiseur.posttraitement import (
     charger_homographes,
     corriger_g2p,
 )
+_NOMS_PIPELINE_FORMULES = ("analyser_phrase_complete", "ResultatPhraseG2P", "MotAnalyseG2P")
+_ERREUR_FORMULES: ImportError | None = None
 try:
     from lectura_phonemiseur.pipeline_formules import (
         analyser_phrase_complete,
         ResultatPhraseG2P,
         MotAnalyseG2P,
     )
-except ImportError:
-    pass  # lectura_formules non disponible — pipeline_formules desactive
+except ImportError as _exc:
+    # lectura-formules est optionnel (extra [formules]) : le reste du paquet
+    # fonctionne sans lui ; l'acces a ces noms leve une erreur explicite.
+    _ERREUR_FORMULES = _exc
+
+
+def __getattr__(name: str):
+    if name in _NOMS_PIPELINE_FORMULES and _ERREUR_FORMULES is not None:
+        raise ImportError(
+            f"{name} requiert le paquet lectura-formules. "
+            "Installez-le : pip install 'lectura-phonemiseur[formules]' "
+            f"(cause : {_ERREUR_FORMULES})"
+        ) from _ERREUR_FORMULES
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 try:
     from lectura_phonemiseur.groupes_lecture import (

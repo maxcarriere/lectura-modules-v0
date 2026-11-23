@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectura-diphone"
-version = "2.1.0"
+version = "2.2.0"
 description = "Synthèse vocale du français par diphones WORLD (Lectura), en local — French diphone TTS with the WORLD vocoder"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,9 +35,9 @@ dependencies = ["pyworld>=0.3.4", "numpy>=1.24", "scipy>=1.10"]
 
 [project.optional-dependencies]
 # Texte -> phonèmes, en local (poids téléchargés au premier usage par lectura-phonemiseur)
-g2p = ["lectura-g2p>=4.1.5"]
+g2p = ["lectura-g2p>=4.2.0"]
 # Changement de timbre par IA : version qui pose le filigrane IA (MARQUE_IA)
-vc = ["lectura-vc-zeroshot>=1.3"]
+vc = ["lectura-vc-zeroshot>=1.4"]
 # Ancien nom de l'extra (2.0.x) : les dépendances sont désormais obligatoires
 local = []
 test = ["pytest>=7"]

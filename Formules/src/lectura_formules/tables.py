@@ -3,7 +3,9 @@
 Charge les 9 CSV embarqués via importlib.resources (Python 3.10+)
 et expose un singleton paresseux via get_store().
 
-Licence : CC-BY-SA-4.0
+Copyright (C) 2025-2026 Maxime Carrière (Lectura)
+Licence : AGPL-3.0-or-later — voir LICENCE.txt
+Licence commerciale disponible — contact via https://www.lectura.world
 """
 
 from __future__ import annotations

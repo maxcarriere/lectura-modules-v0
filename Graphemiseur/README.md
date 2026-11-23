@@ -9,13 +9,13 @@ Génération v0 (2026) de Lectura — https://www.lectura.world/developpement/mo
 
 Un seul modele BiLSTM char-level multi-tete V7 avec attention cross word-char, lex_select et phone_lex_features (ONNX INT8) qui predit simultanement :
 
-- **P2G** : transcription IPA vers orthographe (chaîne complète v0 : 6,9 % de mots faux, voir « Résultats »)
+- **P2G** : transcription IPA vers orthographe (chaîne complète v0 : voir « Résultats »)
 - **POS** : etiquetage morpho-syntaxique — 19 tags
 - **Morphologie** : genre, nombre, temps, mode, personne, forme verbale
 
 Le modele V7 ajoute un mecanisme d'attention cross word-char et le lex_select (selection lexicale parmi candidats phonetiques).
 
-Tout tourne en local (ONNX Runtime). Les poids du modele et le lexique phonetique (36,6 Mo en tout) sont telecharges
+Tout tourne en local (ONNX Runtime). Les poids du modele et le lexique phonetique (33,8 Mo en tout) sont telecharges
 depuis Hugging Face au premier usage, puis gardes sur le disque ; les poids sont sous licence CC BY-NC 4.0 (voir « Modèles »).
 
 ## Demarrage rapide
@@ -31,12 +31,12 @@ pip install lectura-graphemiseur             # installe aussi onnxruntime et num
 ```python
 from lectura_graphemiseur import creer_engine
 
-# Premier appel : telecharge les poids (36,6 Mo) dans ~/.lectura/models/p2g/
+# Premier appel : telecharge les poids (33,8 Mo) dans ~/.lectura/models/p2g/
 engine = creer_engine()
 
 result = engine.analyser(["le", "ɑ̃fɑ̃", "sɔ̃", "aʁive", "a", "la", "mɛzɔ̃"])
 
-print(result["ortho"])   # ['les', 'enfants', 'sont', 'arrives', 'a', 'la', 'maison']
+print(result["ortho"])   # ['les', 'enfants', 'sont', 'arrivés', 'à', 'la', 'maison']
 print(result["pos"])     # ['ART:def', 'NOM', 'AUX', 'VER', 'PRE', 'ART:def', 'NOM']
 print(result["morpho"])  # {'Number': ['Plur', 'Plur', ...], 'Gender': [...], ...}
 ```
@@ -48,7 +48,7 @@ Modes disponibles : `"auto"` (defaut, ONNX Runtime), `"local"`, `"onnx"`.
 Tout tourne en local : aucun appel à un serveur Lectura.
 
 Les poids du modèle P2G ne sont pas dans la roue. Au premier usage, `creer_engine()` les télécharge depuis
-Hugging Face ([lecturaworld/lectura-p2g-v0](https://huggingface.co/lecturaworld/lectura-p2g-v0), 7 fichiers, 36,6 Mo), vérifie leur empreinte SHA-256
+Hugging Face ([lecturaworld/lectura-p2g-v0](https://huggingface.co/lecturaworld/lectura-p2g-v0), 3 fichiers, 33,8 Mo), vérifie leur empreinte SHA-256
 et les range dans `~/.lectura/models/p2g/` (ou `$LECTURA_MODELS_DIR/p2g/`, ou le dossier passé en `models_dir=`).
 Les usages suivants n'utilisent plus le réseau.
 
@@ -56,22 +56,27 @@ Les usages suivants n'utilisent plus le réseau.
   indique les fichiers attendus, leurs empreintes et comment les poser à la main.
 - Poids sous licence CC BY-NC 4.0 (usage non commercial) ; usage commercial inclus dans toute licence commerciale Lectura v1 en cours de validité, autres cas sur demande : https://www.lectura.world/contact/
 - Le lexique phonétique `phone_lexicon.db`, téléchargé avec les poids, est une table de données sous CC BY-SA 4.0 (voir NOTICE).
+- `LECTURA_P2G_VERSION=v6` : usage interne seulement. Le modèle V6 n'est pas publié ; sans ses fichiers,
+  `creer_engine()` lève `FileNotFoundError`. Laisser la variable vide pour le modèle V7 publié.
+- Le correcteur neuronal des versions précédentes a été retiré (23/11/2026) : il abîmait des mots justes.
+  Ses fichiers ne sont plus téléchargés.
 
 ## Backend d'inference
 
-Le paquet tourne avec ONNX Runtime (environ 2 ms par phrase sur CPU). Les backends NumPy et pur Python restent
+Le paquet tourne avec ONNX Runtime (25 à 60 ms par phrase mesurés sur CPU, limité à 2 cœurs). Les backends NumPy et pur Python restent
 dans le code, mais demandent des poids convertis (`modeles_numpy/`) qui ne sont pas publiés.
 
-## Pipeline V7 (raw → lex_select → post-traitement)
+## Pipeline V7 (raw → lex_select)
 
-Le pipeline complet applique trois etapes successives :
+`engine.analyser()` applique deux etapes :
 
 1. **Raw** : prediction brute du modele BiLSTM
 2. **Lex_select** : selection lexicale par phone_lexicon — le modele choisit parmi les candidats phonetiquement compatibles
-3. **Post-traitement** :
-   - **Formules** : reconnaissance deterministe de nombres, sigles, dates via `lectura_formules`
-   - **Coherence morpho** : accord ortho-morpho (pluriel, feminin, conjugaison)
-   - **Accents** : correction a/a, ou/ou par POS
+
+Le post-traitement n'est pas applique automatiquement. Ce paquet fournit `corriger_phrase_v3()` (coherence
+morphologique et accents, a appeler soi-meme). Les formules (nombres, sigles, dates), les elisions, les mots composes,
+les noms propres et la chaine complete sont dans `lectura-p2g` (fonction `analyser()`), qui depend de ce paquet et de
+`lectura-formules`.
 
 ## Phone_lex_features (V7)
 
@@ -85,15 +90,23 @@ Le `phone_lexicon.db` est detecte automatiquement dans le dossier modeles. Sans 
 
 ## Résultats
 
-Banc du 16/11/2026, en local sur CPU, chaîne complète P2G v0 (`lectura-p2g`, qui utilise ce paquet), sur le test
-de FLEURS (français lu, 676 phrases). Entrée : la phonétique produite par le G2P v0 de Lectura à partir du texte de référence.
+Bancs du 23/11/2026, en local sur CPU, avec le code publié corrigé (`lectura-p2g`, sans le correcteur neuronal,
+retiré : il abîmait des mots justes) et les poids publiés. Taux d'erreur sur les mots (WER strict, casse et ponctuation
+ignorées). Aucun outil public comparable n'existe à notre connaissance ; la base naïve écrit chaque mot avec son
+orthographe la plus fréquente, sans contexte.
 
-| Mesure | Score |
-|---|---|
-| Mots faux (WER tolérant, sans majuscules ni ponctuation) | 6,9 % |
-| Phrases avec au moins une faute | 77 % |
+| Banc | Entrée | Base naïve | **Lectura P2G v0** |
+|---|---|---|---|
+| FLEURS test (676 phrases lues) | phonétique **entendue dans l'audio** par un modèle acoustique, commune à tous | 36,8 % | **20,5 %** |
+| CSF18 (238 phrases) | phonétique **corrigée à la main** ; frontières de mots posées par alignement | 41,4 % | **25,5 %** |
 
-La sortie n'a ni majuscules ni ponctuation. Les têtes POS et morphologie n'ont pas été mesurées sur ce banc.
+Les chiffres de FLEURS comprennent les erreurs d'écoute du modèle acoustique (environ 5,7 % des phonèmes). CSF18 est
+fait de phrases qui couvrent tous les sons du français, avec beaucoup de noms propres et de mots rares, que l'oreille
+seule ne permet pas d'écrire.
+
+CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https://doi.org/10.5281/zenodo.5554849) (CC BY 4.0) ; Sankar et al., ICASSP 2022. FLEURS : Conneau et al., 2022 (CC BY 4.0).
+
+Limites constatées : le modèle ne rend ni majuscules ni ponctuation.
 
 ## Interface Python
 
@@ -116,10 +129,11 @@ Le parametre `use_lex=False` desactive les features lexicales (utile pour le ben
 
 Tokenise une phrase IPA (split sur espaces).
 
-### `corriger_phrase_v3(ortho_words, pos_tags, morpho_features, ..., ipa_words=None) -> list[str]`
+### `corriger_phrase_v3(ortho_words, pos_tags, morpho_features, lexique=None, lexique_index=None, freq_map=None, lex_candidates=None, skip_positions=None) -> list[str]`
 
-Pipeline post-traitement V6 complet : formules (via `ipa_words`) + coherence morpho + accents.
-Le parametre `ipa_words` active la reconnaissance de formules (nombres, sigles).
+Post-traitement : coherence ortho-morpho (pluriel, feminin, conjugaison), accords determinant/pronom, homophones par
+POS (a/à, ou/où) et par morphologie (il/ils, au/aux). `skip_positions` protege des positions de toute correction.
+Pas de formules ici : elles sont dans `lectura-p2g`.
 
 ### `corriger_phrase_v2(ortho_words, pos_tags, lexique) -> list[str]`
 

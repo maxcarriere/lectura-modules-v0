@@ -762,4 +762,6 @@ def test_synth_groups_voix_none():
     assert "voix_variante" in params
     assert params["voix_variante"].default == 0.0
     assert "voix_tau" in params
-    assert params["voix_tau"].default == 0.3
+    # voix_tau est sans effet (pas d'entrée tau dans le modèle ONNX) : défaut None,
+    # DeprecationWarning s'il est donné (voir test_corrections_v0.py)
+    assert params["voix_tau"].default is None

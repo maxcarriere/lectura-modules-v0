@@ -12,6 +12,7 @@ import logging
 import pickle
 import random
 import time
+import warnings
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -27,6 +28,34 @@ from lectura_diphone._world import (
 )
 
 log = logging.getLogger(__name__)
+
+# Bornes hautes annoncées des réglages du timbre (au-delà : ramenées à la borne,
+# avec un avertissement).
+AP_CLEANUP_MAX = 3.0
+FORMANT_SHARPENING_MAX = 2.0
+
+VOIX_TAU_SANS_EFFET = (
+    "voix_tau est sans effet : le modèle ONNX d'OpenVoice (lectura-vc-zeroshot) "
+    "n'a pas d'entrée tau (la conversion est déterministe). Le paramètre est gardé "
+    "pour compatibilité et sera retiré dans une version future ; ne le passez plus."
+)
+
+
+def _avertir_voix_tau(voix_tau: float | None, stacklevel: int = 3) -> None:
+    """DeprecationWarning si ``voix_tau`` est donné (il n'a aucun effet)."""
+    if voix_tau is not None:
+        warnings.warn(VOIX_TAU_SANS_EFFET, DeprecationWarning, stacklevel=stacklevel)
+
+
+def _borner(nom: str, valeur: float, maximum: float, stacklevel: int = 3) -> float:
+    """Ramène ``valeur`` à ``maximum`` s'il le dépasse (avec un avertissement)."""
+    if valeur > maximum:
+        warnings.warn(
+            f"{nom}={valeur!r} dépasse le maximum {maximum} : ramené à {maximum}.",
+            UserWarning, stacklevel=stacklevel,
+        )
+        return maximum
+    return valeur
 
 
 @dataclass
@@ -161,6 +190,7 @@ class DiphoneEngine:
         self.diphone_stats: dict[str, dict] = {}
         self.pause_stats: dict[str, dict] = {}
         self.loaded = False
+        self._phones_connus: frozenset[str] | None = None
 
     def load(self, models_dir: str | Path | None = None) -> None:
         """Charge la banque de diphones (``diphones.dpk.gz``).
@@ -175,6 +205,7 @@ class DiphoneEngine:
 
         t0 = time.time()
         self.diphones = load_compressed(resolved / "diphones.dpk.gz")
+        self._phones_connus = None
 
         log.info("Charge %d diphones (%.1fs)", len(self.diphones), time.time() - t0)
 
@@ -188,6 +219,16 @@ class DiphoneEngine:
             log.info("Charge stats corpus: %d diphones", len(self.diphone_stats))
 
         self.loaded = True
+
+    @property
+    def phones_connus(self) -> frozenset[str]:
+        """Phonèmes présents dans la banque (tirés des clés ``a-b`` des diphones)."""
+        if getattr(self, "_phones_connus", None) is None:
+            connus: set[str] = set()
+            for cle in self.diphones:
+                connus.update(cle.split("-"))
+            self._phones_connus = frozenset(connus)
+        return self._phones_connus
 
     # ── Diphone chain ──────────────────────────────────────────────────
 
@@ -673,7 +714,7 @@ class DiphoneEngine:
         # -- Retimbre (OpenVoice zero-shot) --
         voix: str | None = None,
         voix_variante: float = 0.0,
-        voix_tau: float = 0.3,
+        voix_tau: float | None = None,
         vc_models_dir: str | Path | None = None,
     ) -> DiphoneResult:
         """Synthesize multiple prosodic groups with inter-group pauses.
@@ -711,9 +752,11 @@ class DiphoneEngine:
                 1.0=pas de changement, 1.3=naturel, 2.0=fort. Restaure le
                 detail spectral perdu par le moyennage des diphones.
             ap_cleanup: compression power-law de l'aperiodicite (1.0=off,
-                1.5=defaut, max 3.0). Reduit la raucite du moyennage.
+                1.5=defaut, max 3.0 : au-dela, ramene a 3.0 avec un
+                avertissement). Reduit la raucite du moyennage.
             formant_sharpening: affutage cepstral des formants (1.0=off,
-                1.3=defaut, max 2.0). Restaure la nettete spectrale.
+                1.3=defaut, max 2.0 : au-dela, ramene a 2.0 avec un
+                avertissement). Restaure la nettete spectrale.
             vtln_alpha: warping VTLN du tract vocal (0.8=grave/sombre,
                 1.0=neutre, 1.2=aigu/brillant).
             timbre: nom de signature de timbre (ex: "homme", "enfant") ou
@@ -734,12 +777,15 @@ class DiphoneEngine:
             voix_variante: curseur de variante vocale (-1 a +1).
                 -1 = grave/masculin, 0 = neutre, +1 = aigu/enfant.
                 Decale les formants via le trick SR OpenVoice.
-            voix_tau: parametre tau d'OpenVoice (0 = deterministe).
+            voix_tau: sans effet (le modele ONNX d'OpenVoice n'a pas cette
+                entree ; conversion deterministe). Garde pour compatibilite :
+                DeprecationWarning s'il est donne.
             vc_models_dir: repertoire des modeles VC (defaut: auto-detection).
 
         Returns:
             DiphoneResult with audio samples and phoneme timings
         """
+        _avertir_voix_tau(voix_tau)
         if voix is not None:
             from lectura_diphone._retimbre import verifier_voix
             verifier_voix(voix)
@@ -758,6 +804,10 @@ class DiphoneEngine:
                 f"prosody_style invalide: {prosody_style!r}. "
                 f"Valeurs possibles: {sorted(self._PROSODY_STYLES)}"
             )
+
+        ap_cleanup = _borner("ap_cleanup", ap_cleanup, AP_CLEANUP_MAX)
+        formant_sharpening = _borner(
+            "formant_sharpening", formant_sharpening, FORMANT_SHARPENING_MAX)
 
         # Charger la signature de timbre si demandee
         timbre_signature = None
@@ -826,8 +876,7 @@ class DiphoneEngine:
         # Le retimbre ne change pas la duree, les timings restent valides
         if voix is not None:
             combined = self._apply_retimbre(
-                combined, SIWIS_SR, voix, voix_variante, voix_tau,
-                vc_models_dir,
+                combined, SIWIS_SR, voix, voix_variante, None, vc_models_dir,
             )
 
         return DiphoneResult(
@@ -981,6 +1030,7 @@ class DiphoneEngine:
     # -- Retimbre helper ─────────────────────────────────────────────────
 
     _retimbre = None  # RetimbreEngine (lazy, instance-level)
+    _retimbre_dir = None  # vc_models_dir avec lequel _retimbre a été créé
 
     def _apply_retimbre(
         self,
@@ -988,10 +1038,13 @@ class DiphoneEngine:
         sr: int,
         voix: str,
         voix_variante: float,
-        voix_tau: float,
+        voix_tau: float | None,
         vc_models_dir: str | Path | None,
     ) -> np.ndarray:
         """Change le timbre (OpenVoice) puis remonte de 22050 à SIWIS_SR.
+
+        ``voix_tau`` est ignoré (sans effet dans lectura-vc-zeroshot) ; gardé
+        dans la signature pour compatibilité.
 
         Le son rendu par lectura-vc-zeroshot porte déjà le filigrane IA. Les
         seules opérations faites ensuite sont un suréchantillonnage polyphasé
@@ -1006,12 +1059,14 @@ class DiphoneEngine:
 
         from lectura_diphone._retimbre import RetimbreEngine
 
-        if self._retimbre is None:
+        # Un moteur réutilisé (cache de synthetiser) peut recevoir un autre
+        # vc_models_dir : on recrée alors le moteur de conversion.
+        if self._retimbre is None or self._retimbre_dir != vc_models_dir:
             self._retimbre = RetimbreEngine(vc_models_dir=vc_models_dir)
+            self._retimbre_dir = vc_models_dir
 
         retimbre_audio, retimbre_sr = self._retimbre.retimbre(
-            audio, sr, voix,
-            variante=voix_variante, tau=voix_tau,
+            audio, sr, voix, variante=voix_variante,
         )
 
         if retimbre_sr != SIWIS_SR:
@@ -1111,9 +1166,23 @@ class DiphoneEngine:
         if isinstance(mode, str):
             mode = SynthMode(mode)
 
+        ap_cleanup = _borner("ap_cleanup", ap_cleanup, AP_CLEANUP_MAX)
+        formant_sharpening = _borner(
+            "formant_sharpening", formant_sharpening, FORMANT_SHARPENING_MAX)
+
         # Normaliser les phones (ex: œ̃ → ɛ̃)
         if _PHONE_NORMALIZE:
             phones = [_PHONE_NORMALIZE.get(p, p) for p in phones]
+
+        # Phonèmes absents de la banque : leurs diphones sont remplacés par un
+        # silence. On le signale au lieu de les ignorer en silence.
+        inconnus = sorted({p for p in phones if p not in self.phones_connus})
+        if inconnus:
+            warnings.warn(
+                "Phonèmes inconnus de la banque, remplacés par un silence : "
+                + ", ".join(repr(p) for p in inconnus),
+                UserWarning, stacklevel=2,
+            )
 
         chain = self.build_diphone_chain(phones)
         n = len(phones)

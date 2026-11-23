@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectura-g2p"
-version = "4.1.5"
+version = "4.2.0"
 description = "Pipeline G2P complet du français — Tokeniseur + Formules + Phonémiseur + Groupes de lecture"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,13 +28,12 @@ classifiers = [
 ]
 dependencies = [
     "lectura-tokeniseur>=2.3.7",
-    "lectura-formules>=3.7.11",
-    "lectura-phonemiseur>=4.1.11",
-    "lectura-lexique>=1.5.4",
+    "lectura-formules>=3.8.0",
+    "lectura-phonemiseur>=4.2.0",
 ]
 
 [project.optional-dependencies]
-aligneur = ["lectura-aligneur>=4.0.5"]
+aligneur = ["lectura-aligneur>=4.0.6"]
 
 [project.urls]
 Homepage = "https://www.lectura.world/developpement/modules/"

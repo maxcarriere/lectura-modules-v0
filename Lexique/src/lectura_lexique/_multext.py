@@ -27,6 +27,7 @@ _POS = {
     "C": "CON",
     "I": "ONO",
     "X": "AUT",
+    "Y": "SIGLE",  # étiquette des sigles dans les bases plus anciennes (Ys : sigle épelé, Ya : acronyme)
 }
 
 # Position 1 : Sous-type (depend de la categorie)
@@ -42,6 +43,7 @@ _SUBTYPE = {
            "s": "possessif", "t": "interrogatif", "r": "relatif",
            "x": "reflexif"},
     "X": {"u": "unité", "l": "lettre", "a": "abréviation", "s": "sigle", "c": "acronyme"},
+    "Y": {"s": "sigle", "a": "acronyme"},
 }
 
 # Modes verbaux (position 2 des verbes)
@@ -152,10 +154,10 @@ def decoder_multext(tag: str) -> dict[str, str]:
         if len(tag) > 4 and tag[4] != "-":
             result["nombre"] = _NOMBRE.get(tag[4], tag[4])
 
-    elif cat == "X":
-        # Autre : X sous_type (u=unité, l=lettre)
+    elif cat in ("X", "Y"):
+        # Autre : X sous_type (u=unité, l=lettre) ; Y : sigle (s) ou acronyme (a)
         if len(tag) > 1 and tag[1] != "-":
-            st = _SUBTYPE.get("X", {}).get(tag[1])
+            st = _SUBTYPE.get(cat, {}).get(tag[1])
             if st:
                 result["sous_type"] = st
 

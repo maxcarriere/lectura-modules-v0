@@ -19,7 +19,7 @@ Tout tourne en local : aucun appel à un serveur Lectura.
 
 Les poids des modèles ne sont pas dans les roues. Au premier usage, `creer_engine()` les télécharge depuis Hugging Face,
 vérifie leur empreinte SHA-256 et les range dans `~/.lectura/models/p2g/` (ou `$LECTURA_MODELS_DIR/p2g/`) :
-[lecturaworld/lectura-p2g-v0](https://huggingface.co/lecturaworld/lectura-p2g-v0), 7 fichiers, 36,6 Mo, dont le lexique phonétique `phone_lexicon.db` (table de données sous CC BY-SA 4.0, voir le NOTICE de `lectura-graphemiseur`). Les usages suivants n'utilisent plus le réseau.
+[lecturaworld/lectura-p2g-v0](https://huggingface.co/lecturaworld/lectura-p2g-v0), 3 fichiers, 33,8 Mo, dont le lexique phonétique `phone_lexicon.db` (table de données sous CC BY-SA 4.0, voir le NOTICE de `lectura-graphemiseur`). Les usages suivants n'utilisent plus le réseau.
 
 - `LECTURA_HORS_LIGNE=1` : aucun téléchargement ; si des poids manquent, l'erreur `LecturaModelesIndisponibles`
   indique les fichiers attendus et comment les poser à la main.
@@ -34,8 +34,46 @@ from lectura_p2g import analyser, creer_engine
 
 engine = creer_engine()
 result = analyser(["le", "ɑ̃fɑ̃", "ʒu"], engine=engine)
-print(result["ortho"])
+print(result["ortho"])   # ['les', 'enfants', 'jouent']
 ```
+
+`analyser()` rend un dictionnaire `{"ipa_words", "ortho", "pos", "morpho"}` (plus `"alignments"` avec `aligner=`),
+avec une position par mot d'entrée. Les signes de ponctuation de l'entrée (`","`, `"."`...) sont recopiés tels
+quels, avec l'étiquette `PUNCT`.
+
+### Cases vides
+
+Quand plusieurs mots en API donnent un seul mot écrit (nombre « vɛ̃ e ɛ̃ » → « 21 », élision « l ɔm » → « l'homme »,
+mot composé « oʒuʁ dɥi » → « aujourd'hui », sigle « ɛs ɛn se ɛf » → « SNCF »), le mot écrit occupe la première
+position et `ortho` vaut `""` aux positions suivantes, pour que toutes les listes restent alignées sur l'entrée :
+
+```python
+r = analyser(["il", "a", "vɛ̃", "e", "ɛ̃", "ɑ̃"], engine=engine)
+r["ortho"]                                   # ['il', 'a', '21', '', '', 'ans']
+" ".join(o for o in r["ortho"] if o)         # 'il a 21 ans'
+
+r = analyser(["il", "a", "vɛ̃", "e", "ɛ̃", "ɑ̃"], engine=engine, compacter=True)
+r["ortho"], r["ipa_words"]                   # ['il', 'a', '21', 'ans'], ['il', 'a', 'vɛ̃ e ɛ̃', 'ɑ̃']
+```
+
+Avec `compacter=True`, les cases vides sont retirées de toutes les listes et leur mot en API est rattaché à la
+position écrite qui les précède : l'alignement entre listes reste cohérent, mais leur longueur peut être inférieure
+à celle de l'entrée.
+
+### Options d'`analyser()`
+
+| Option | Défaut | Effet |
+|---|---|---|
+| `formule_mode` | `"num"` | formules en chiffres (`"num"` : 21, SNCF) ou en lettres (`"texte"`) |
+| `formule_tolerance` | `"exact"` | `"stt"` : reconnaissance tolérante pour une phonétique issue d'une reconnaissance vocale |
+| `number_mode` | `"auto"` | `"auto"` : un nombre d'un seul mot (« quinze », « sept ») reste en lettres ; `"num"` : tous les nombres en chiffres ; `"texte"` : aucun |
+| `stt_mode` | `"auto"` | `"formule"` : tout détecter (formules mathématiques comprises) ; `"texte"` : sigles seulement |
+| `corrections_p2g` | `True` | table de corrections (phonèmes sans ambiguïté → mot) : `True` (base), `"etendu"`, ou `False` |
+| `aligner` | `None` | aligneur grapho-phonémique (ajoute `"alignments"`) |
+| `compacter` | `False` | retirer les cases vides (voir plus haut) |
+
+`corriger_phrase_pipeline(ortho, pos, morpho, ipa_words=..., phone_lexicon=..., ...)` applique les mêmes corrections
+à une sortie brute du graphémiseur (`engine.analyser()`).
 
 ### Avec alignement
 
@@ -52,7 +90,11 @@ print(result["alignments"][0].syllabes)
 ## Architecture
 
 - **Couche 1** : `lectura-graphemiseur` — modele P2G (poids telecharges au premier usage, voir « Modèles »)
-- **Couche 2** : `lectura-p2g` — pipeline complet (graphemiseur + formules + coherence morpho + noms propres)
+- **Couche 2** : `lectura-p2g` — pipeline complet, dans cet ordre : formules (nombres, sigles, via `lectura-formules`),
+  élisions, mots composés, table de corrections, cohérence morphologique et accents, noms propres, entités nommées.
+
+Le correcteur neuronal des versions précédentes a été retiré (23/11/2026) : il abîmait des mots justes
+(« il fait beau » → « baa »). Ses fichiers ne sont plus téléchargés.
 
 ## Licence
 

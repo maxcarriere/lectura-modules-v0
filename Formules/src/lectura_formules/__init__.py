@@ -36,10 +36,13 @@ from lectura_formules.lecture_formules import (
     lire_intervalle,
     lire_gps,
     lire_page_chapitre,
+    lire_romain,
+    lire_abv,
+    lire_unite,
     enrichir_formules,
 )
 from lectura_formules.tables import TablesStore, UniteDef, get_store, get_sound_path, get_sounds_dir, set_sounds_dir
 from lectura_formules.romains import int_to_roman, roman_to_int
 from lectura_formules.reconnaissance import reconnaitre_ipa, reconnaitre_ipa_stt, detect_number_spans, detect_sigle_spans, reconnaitre_maths_ipa, detect_formula_spans, reconnaitre_maths_ipa_stt, detect_formula_spans_stt, detect_formule_spans_stt
 
-__version__ = "3.7.11"
+__version__ = "3.8.0"

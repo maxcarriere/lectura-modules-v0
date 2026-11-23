@@ -10,7 +10,9 @@ pour la lecture de nombres, sigles, dates, téléphones, ordinaux, fractions,
 notations scientifiques, formules mathématiques, numéros, heures, monnaies,
 pourcentages, intervalles, coordonnées GPS et pages/chapitres.
 
-Licence : CC-BY-SA-4.0
+Copyright (C) 2025-2026 Maxime Carrière (Lectura)
+Licence : AGPL-3.0-or-later — voir LICENCE.txt
+Licence commerciale disponible — contact via https://www.lectura.world
 """
 
 from __future__ import annotations
@@ -87,7 +89,7 @@ class LectureFormuleResult:
 class OptionsLecture:
     """Options pour la lecture des formules."""
     fraction_mode: str = "hybride"   # "hybride", "ordinal", "standard"
-    decimal_method: str = "m2"       # "m1" (reste comme entier), "m2" (groupes de 3)
+    decimal_method: str = "m2"       # "m1" (reste comme entier), "m2" (groupes de 3), "m3" (chiffre par chiffre)
     heure_mot_minutes: bool = False  # dire "minutes" quand format h/colon
     monnaie_dire_centimes: bool = True  # inclure les centimes
     romain_actif: bool = True        # calculer display_rom pour les nombres
@@ -2935,7 +2937,11 @@ def lire_heure(
         ))
         comp += 1
 
-    # Minutes
+    # Minutes : « 12h00 », « 14:00 » se lisent sans les minutes nulles
+    # (« midi », « quatorze heures », et non « midi zéro »)
+    if (minutes == 0 and seconds is None and hours is not None
+            and fmt in ("h", "colon") and not add_min_word):
+        minutes = None
     if minutes is not None:
         parts = _nombre_vers_francais(minutes, feminin=True)
         evts = _events_from_parts(parts, span, text, composant=comp)
@@ -3381,9 +3387,9 @@ def lire_intervalle(
         evt.span_num = (lv_start, lv_end)
     events.extend(left_events)
 
-    # "a" (connecteur, composant 1) → surligne le ";"
+    # "à" (connecteur, composant 1) → surligne le ";"
     evt_a = EventFormuleLecture(
-        ortho="a", phone="a", span_source=span, composant=1,
+        ortho="à", phone="a", span_source=span, composant=1,
     )
     evt_a.span_num = (sep_start, sep_end)
     events.append(evt_a)
@@ -3688,7 +3694,7 @@ def lire_unite(
 
 # Dispatch table : formule_type → lecteur
 _LECTEURS: dict[str, object] = {
-    # 9 existants
+    # 18 types acceptes (voir la docstring de lire_formule)
     "nombre":       lire_nombre,
     "sigle":        lire_sigle,
     "date":         lire_date,
@@ -3698,7 +3704,6 @@ _LECTEURS: dict[str, object] = {
     "scientifique": lire_scientifique,
     "maths":        lire_maths,
     "numero":       lire_numero,
-    # 6 nouveaux
     "heure":           lire_heure,
     "monnaie":         lire_monnaie,
     "pourcentage":     lire_pourcentage,
@@ -3724,8 +3729,10 @@ def lire_formule(
     Parameters
     ----------
     formule_type : str
-        Type de formule (nombre, sigle, date, telephone, ordinal,
-        fraction, scientifique, maths, numero).
+        Type de formule, parmi les 18 types acceptes : nombre, sigle, date,
+        telephone, ordinal, fraction, scientifique, maths, numero, heure,
+        monnaie, pourcentage, intervalle, gps, page_chapitre, romain, abv,
+        unite. Un type inconnu est epele lettre par lettre.
     text : str
         Texte source de la formule.
     span : tuple[int, int]
@@ -3733,7 +3740,8 @@ def lire_formule(
     children : list | None
         Sous-tokens du Tokeniseur (pour les formules composites).
     options : OptionsLecture | None
-        Options de lecture (mode fraction, methode decimale).
+        Options de lecture (mode fraction, methode decimale ``"m1"``,
+        ``"m2"`` ou ``"m3"``, heures, monnaie...), voir ``OptionsLecture``.
     feminin : bool
         Si True, utilise les formes feminines (une au lieu de un).
 

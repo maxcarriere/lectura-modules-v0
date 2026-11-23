@@ -1044,6 +1044,18 @@ def _is_number_token(ipa_word: str) -> bool:
     return True
 
 
+def _is_connecteur_et(ipa_word: str) -> bool:
+    """Vrai si le mot IPA n'est que le connecteur « et » (/e/, ou /ɛ/ en STT).
+
+    Ce connecteur n'a de sens qu'a l'interieur d'une formule
+    (« vingt et un », « trois euros et cinquante »). En bord de span, il
+    s'agit d'un mot de la phrase (« est », « et », « ai ») : la formule ne
+    doit pas l'englober (« il ɛ kɛ̃z œʁ » → « il est 15 heures »).
+    """
+    tokens = _tokenize_ipa_stt(ipa_word)
+    return bool(tokens) and all(t.key == "et" for t in tokens)
+
+
 def _is_letter_token(ipa_word: str) -> bool:
     """Verifie si un mot IPA est exactement un token lettre."""
     tokens = _tokenize_ipa_stt(ipa_word)
@@ -1174,6 +1186,8 @@ def detect_number_spans(
 
     # Phase 1 : pre-filtrer les mots qui ressemblent a des tokens numeriques
     is_num = [_is_number_token(w) for w in ipa_words]
+    # Le connecteur « et » ne peut pas ouvrir ni fermer un span
+    is_et = [_is_connecteur_et(w) for w in ipa_words]
 
     # Phase 2 : trouver les runs contigus de tokens numeriques potentiels
     # (avec tolerance d'un mot non-numerique entre deux numeriques pour
@@ -1193,6 +1207,8 @@ def detect_number_spans(
             # Tous les mots du span doivent etre des tokens numeriques
             # (evite d'absorber des mots grammaticaux comme "a", "de", "il")
             if not all(is_num[j] for j in range(i, end)):
+                continue
+            if is_et[i] or is_et[end - 1]:
                 continue
 
             # Concatener et tenter la reconnaissance
@@ -1305,6 +1321,8 @@ def detect_formule_spans_stt(
 
     token_check = _is_formule_token_permissive if permissive else _is_formule_token
     is_form = [token_check(w) for w in ipa_words]
+    # Le connecteur « et » ne peut pas ouvrir ni fermer un span
+    is_et = [_is_connecteur_et(w) for w in ipa_words]
 
     results: list[tuple[int, int, LectureFormuleResult]] = []
     used: set[int] = set()
@@ -1315,6 +1333,8 @@ def detect_formule_spans_stt(
             if any(j in used for j in range(i, end)):
                 continue
             if not all(is_form[j] for j in range(i, end)):
+                continue
+            if is_et[i] or is_et[end - 1]:
                 continue
 
             merged_ipa = " ".join(ipa_words[i:end])

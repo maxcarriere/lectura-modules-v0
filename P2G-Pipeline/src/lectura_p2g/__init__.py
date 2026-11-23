@@ -24,7 +24,7 @@ import json
 import unicodedata
 from importlib import resources
 
-__version__ = "4.6.5"
+__version__ = "4.7.0"
 
 # ── Re-exports depuis le graphemiseur (couche 1) ─────────────────────
 
@@ -34,11 +34,12 @@ from lectura_graphemiseur import corriger_p2g, corriger_phrase_v2, corriger_phra
 
 # ── Corrections P2G (lookup IPA → ortho pour phones sans ambiguite) ──
 
-_P2G_CORRECTIONS: dict[str, str] | None = None
+# Un cache par fichier : False -> base, True -> etendu
+_P2G_CORRECTIONS: dict[bool, dict[str, str]] = {}
 
 
 def _charger_corrections(etendu: bool = False) -> dict[str, str]:
-    """Charge le fichier de corrections P2G (singleton).
+    """Charge le fichier de corrections P2G (mis en cache, un par option).
 
     Parameters
     ----------
@@ -46,25 +47,19 @@ def _charger_corrections(etendu: bool = False) -> dict[str, str]:
         Si True, charge le fichier etendu (toutes les phones sans ambiguite).
         Si False, charge le fichier base (freq > 0 uniquement).
     """
-    global _P2G_CORRECTIONS
-    if _P2G_CORRECTIONS is not None:
-        return _P2G_CORRECTIONS
+    etendu = bool(etendu)
+    if etendu in _P2G_CORRECTIONS:
+        return _P2G_CORRECTIONS[etendu]
 
     name = "p2g_corrections_etendu.json" if etendu else "p2g_corrections.json"
     pkg = resources.files("lectura_p2g") / "data" / name
     try:
-        _P2G_CORRECTIONS = json.loads(pkg.read_text(encoding="utf-8"))
+        table = json.loads(pkg.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        # Fallback : essayer le fichier base si l'etendu est absent
-        if etendu:
-            try:
-                pkg_base = resources.files("lectura_p2g") / "data" / "p2g_corrections.json"
-                _P2G_CORRECTIONS = json.loads(pkg_base.read_text(encoding="utf-8"))
-            except FileNotFoundError:
-                _P2G_CORRECTIONS = {}
-        else:
-            _P2G_CORRECTIONS = {}
-    return _P2G_CORRECTIONS
+        # Repli : le fichier base si l'etendu est absent
+        table = _charger_corrections(False) if etendu else {}
+    _P2G_CORRECTIONS[etendu] = table
+    return table
 
 
 def _appliquer_corrections(
@@ -1069,9 +1064,7 @@ def corriger_phrase_pipeline(
       - Etape 0b   : fusion de mots composes (aujourd'hui, peut-etre, etc.)
       - Etape 0b2  : composes mono-mots (IPA compact sans separateur)
       - Etape 0b3  : corrections P2G (lookup IPA → ortho sans ambiguite)
-      - Etape 0c   : correction neuronale (correcteur P2G, optionnel)
       - Etapes 1-1c: coherence morpho + accents (delegue au graphemiseur)
-      - Etape 1d   : rescoring homophones par n-gramme POS (si pos_ngram fourni)
       - Etape 1e   : noms propres (capitalisation via phone_lexicon)
       - Etape 2    : entites notables (dictionnaire IPA)
 
@@ -1107,12 +1100,19 @@ def corriger_phrase_pipeline(
         - ``False``     : desactive
     **kwargs
         Arguments supplementaires passes a corriger_phrase_v3
-        (lexique, lexique_index, freq_map, lex_candidates).
+        (``lexique``, ``lexique_index``, ``freq_map``, ``lex_candidates``).
+        L'ancien parametre
+        ``correcteur`` (correcteur neuronal, retire) est ignore.
 
     Returns
     -------
     list[str]
-        Mots ortho corriges.
+        Mots ortho corriges, un par mot d'entree. Quand plusieurs mots IPA
+        forment un seul mot ecrit (formule « vɛ̃ e ɛ̃ » -> « 21 », elision
+        « l ɔm » -> « l'homme », compose « oʒuʁ dɥi » -> « aujourd'hui »,
+        sigle), le mot ecrit est place sur la premiere position et les
+        positions suivantes valent ``""`` (case vide), pour garder
+        l'alignement avec ``ipa_words``, ``pos`` et ``morpho``.
     """
     result = list(ortho_words)
     n = len(result)
@@ -1150,18 +1150,9 @@ def corriger_phrase_pipeline(
         if corrections:
             _appliquer_corrections(result, ipa_words, corrections, formule_positions)
 
-    # Etape 0c : correction neuronale (optionnel)
-    correcteur = kwargs.pop("correcteur", None)
-    if correcteur is not None:
-        try:
-            corrected = correcteur.corriger(result)
-            for i in range(n):
-                if i not in formule_positions and corrected[i]:
-                    result[i] = corrected[i]
-        except Exception:
-            pass  # Degradation gracieuse
+    kwargs.pop("correcteur", None)  # correcteur neuronal retiré le 23/11/2026 (il abîmait des mots justes)
 
-    # Etapes 1-1d : coherence morpho + accents + rescoring homophones
+    # Etapes 1-1c : coherence morpho + accents
     result = corriger_phrase_v3(
         result, pos_tags, morpho_features,
         skip_positions=formule_positions, **kwargs,
@@ -1189,6 +1180,7 @@ def analyser(
     corrections_p2g: bool | str = True,
     stt_mode: str = "auto",
     aligner: object | None = None,
+    compacter: bool = False,
 ) -> dict:
     """Analyse P2G complete d'une liste de mots IPA.
 
@@ -1223,12 +1215,25 @@ def analyser(
         ``.analyze(word, phone=ipa) -> ResultatAnalyse``).
         Si fourni, ajoute une cle ``"alignments"`` au resultat contenant
         l'alignement grapheme-phoneme mot par mot.
+    compacter : bool
+        Cases vides (voir plus bas). ``False`` (defaut) : toutes les listes
+        gardent une position par mot d'entree. ``True`` : les cases vides
+        sont retirees de toutes les listes, et le mot IPA de chaque case
+        retiree est rattache (separe par une espace) a la position ecrite
+        qui la precede ; l'alignement entre listes reste coherent, mais leur
+        longueur peut etre inferieure a celle de l'entree.
 
     Returns
     -------
     dict
         {"ipa_words": [...], "ortho": [...], "pos": [...], "morpho": {...}}
         Si *aligner* est fourni : ``"alignments": [ResultatAnalyse | None, ...]``
+
+        Cases vides : quand plusieurs mots IPA donnent un seul mot ecrit
+        (formule « vɛ̃ e ɛ̃ » -> « 21 », elision, mot compose, sigle), le mot
+        ecrit occupe la premiere position et ``ortho`` vaut ``""`` aux
+        positions suivantes. ``" ".join(o for o in r["ortho"] if o)``
+        donne la phrase ; ``compacter=True`` retire ces cases.
     """
     if engine is None:
         engine = creer_engine()
@@ -1253,7 +1258,6 @@ def analyser(
             number_mode=number_mode,
             corrections_p2g=corrections_p2g,
             stt_mode=stt_mode,
-            correcteur=getattr(engine, "correcteur", None),
         )
     else:
         result = {"ipa_words": [], "ortho": [], "pos": [], "morpho": {}}
@@ -1287,4 +1291,48 @@ def analyser(
             if "alignments" in result:
                 result["alignments"].insert(pos, None)
 
+    if compacter:
+        _compacter_cases_vides(result)
+
     return result
+
+
+def _compacter_cases_vides(result: dict) -> None:
+    """Retire les cases vides de ``ortho`` (et les positions correspondantes
+    de toutes les listes paralleles) ; le mot IPA d'une case retiree est
+    rattache a la position gardee qui la precede (ou, a defaut, qui la suit).
+
+    Modifie ``result`` en place.
+    """
+    ortho = result.get("ortho", [])
+    if "" not in ortho:
+        return
+    ipa = result.get("ipa_words", [])
+    garder: list[int] = []
+    ipa_fusion: dict[int, list[str]] = {}
+    en_attente: list[str] = []  # cases vides en tete, avant tout mot garde
+    for i, mot in enumerate(ortho):
+        phone = ipa[i] if i < len(ipa) else ""
+        if mot:
+            garder.append(i)
+            ipa_fusion[i] = en_attente + [phone]
+            en_attente = []
+        elif garder:
+            ipa_fusion[garder[-1]].append(phone)
+        else:
+            en_attente.append(phone)
+    if not garder:
+        return  # rien d'ecrit : on laisse la sortie telle quelle
+
+    def _filtrer(liste: list) -> list:
+        return [liste[i] for i in garder if i < len(liste)]
+
+    if ipa:
+        result["ipa_words"] = [" ".join(p for p in ipa_fusion[i] if p) for i in garder]
+    result["ortho"] = _filtrer(ortho)
+    if "pos" in result:
+        result["pos"] = _filtrer(result["pos"])
+    for k, v in result.get("morpho", {}).items():
+        result["morpho"][k] = _filtrer(v)
+    if "alignments" in result:
+        result["alignments"] = _filtrer(result["alignments"])

@@ -33,8 +33,9 @@ Pré-requis système (mode eSpeak) :
     brew install espeak               # macOS
     choco install espeak-ng           # Windows
 
-Copyright (c) 2025 Lectura — Licence CC BY-SA 4.0.
-Voir LICENCE.txt et ATTRIBUTION.md.
+Copyright (C) 2025-2026 Maxime Carrière (Lectura)
+Licence : AGPL-3.0-or-later — voir LICENCE.txt
+Licence commerciale disponible — contact via https://www.lectura.world
 """
 
 from __future__ import annotations
@@ -1272,7 +1273,8 @@ class LecturaSyllabeur:
             Utilise pour construire les groupes via le G2P.
             Ignore si ``groupes`` est fourni.
         lectures_formules : dict[int, LectureFormule] | None
-            Lectures pre-calculees pour les formules (index groupe -> lecture).
+            Lectures pre-calculees pour les formules (index de mot -> lecture),
+            reportees sur le groupe qui contient ce mot.
         options : OptionsGroupes | None
             Options de regroupement (elisions, liaisons, enchainements, schwas).
         groupes : list[GroupeLecture] | None

@@ -61,7 +61,7 @@ def faux_hf(monkeypatch, tmp_path):
 def test_url_par_defaut(monkeypatch):
     monkeypatch.delenv("LECTURA_HF_BASE", raising=False)
     assert _poids.url_fichier("unifie_v4_int8.onnx") == (
-        "https://huggingface.co/lecturaworld/lectura-g2p-v0/resolve/main/unifie_v4_int8.onnx")
+        "https://huggingface.co/lecturaworld/lectura-g2p-v0/resolve/" + _poids.REVISION_HF + "/unifie_v4_int8.onnx")
 
 
 def test_table_des_empreintes():

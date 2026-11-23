@@ -14,6 +14,7 @@ from __future__ import annotations
 import csv
 import sqlite3
 import threading
+import warnings
 from pathlib import Path
 from typing import Any, Callable
 
@@ -73,7 +74,7 @@ class Lexique:
         self._conn_lock = threading.Lock()
         self._col_mapping: dict[str, str] | None = None
 
-        # Schema version (3 or 4) — detected at first SQLite access
+        # Version du schema (3, 4 ou 5), detectee au premier acces SQLite
         self._schema_version: int = 3
         self._table_cache: dict[str, bool] = {}
         self._has_fts: bool = False
@@ -101,17 +102,8 @@ class Lexique:
         """Niveau 1 : charge le set de toutes les formes."""
         if self._backend == "sqlite":
             conn = self._get_conn()
-            # Creer les index NOCASE si absents
-            conn.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self._table}_ortho_nocase "  # noqa: S608
-                f"ON {self._table}(ortho COLLATE NOCASE)"
-            )
-            if self._schema_version < 4:
-                # v3 : lemme est une colonne de formes
-                conn.execute(
-                    f"CREATE INDEX IF NOT EXISTS idx_{self._table}_lemme_nocase "  # noqa: S608
-                    f"ON {self._table}(lemme COLLATE NOCASE)"
-                )
+            # La base est ouverte en lecture seule : aucun index n'y est cree.
+            # Sans index NOCASE, les requetes restent justes (balayage de table).
             cur = conn.execute(f"SELECT DISTINCT lower(ortho) FROM {self._table}")  # noqa: S608
             self._formes = frozenset(row[0] for row in cur)
         else:
@@ -138,7 +130,7 @@ class Lexique:
         """
         conn = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(str(self._source), check_same_thread=False)
+            conn = self._ouvrir_lecture_seule()
             conn.row_factory = sqlite3.Row
             self._local.conn = conn
             with self._conn_lock:
@@ -147,6 +139,23 @@ class Lexique:
             if self._conn is None:
                 self._conn = conn
         return conn
+
+    def _ouvrir_lecture_seule(self) -> sqlite3.Connection:
+        """Ouvre la base SQLite en lecture seule (``mode=ro``) : elle n'est jamais modifiee.
+
+        Si la base est en mode WAL dans un dossier non inscriptible (fichiers
+        ``-wal``/``-shm`` impossibles a creer), on rouvre avec ``immutable=1``.
+        """
+        if not self._source.is_file():
+            raise FileNotFoundError(f"Base lexicale introuvable : {self._source}")
+        uri = self._source.resolve().as_uri() + "?mode=ro"
+        try:
+            conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
+            conn.execute("SELECT 1 FROM sqlite_master LIMIT 1")
+            return conn
+        except sqlite3.OperationalError:
+            conn = sqlite3.connect(uri + "&immutable=1", uri=True, check_same_thread=False)
+            return conn
 
     def _detect_schema_version(self) -> None:
         """Detecte la version du schema BDD (3, 4 ou 5)."""
@@ -1038,11 +1047,15 @@ class Lexique:
                     )
                     where = f"{col_qualified} REGEXP ?"
                     params = (pattern, limite)
+                # Colonnes facultatives selon la version de la base (v4/v5 n'ont pas toutes celles de v6) : NULL si absente.
+                presentes = {r[1] for r in conn.execute("PRAGMA table_info(formes)")}
+                champs = ", ".join(
+                    f"f.{c}" if c in presentes else f"NULL AS {c}"
+                    for c in ("ortho", "phone", "multext", "nb_syllabes", "freq_opensubs", "freq_composite", "syllabes",
+                              "orthocode", "freq_frantext", "freq_frwac", "freq_lm10", "consonne_latente")
+                )
                 cur = conn.execute(
-                    "SELECT f.ortho, f.phone, f.multext, f.nb_syllabes, "
-                    "f.freq_opensubs, f.freq_composite, f.syllabes, f.orthocode, "
-                    "f.freq_frantext, f.freq_frwac, f.freq_lm10, "
-                    "f.consonne_latente, "
+                    f"SELECT {champs}, "
                     "l.lemme, l.cgram, l.age "
                     "FROM formes f "
                     "LEFT JOIN lemmes l ON f.lemme_id = l.id "
@@ -1212,7 +1225,7 @@ class Lexique:
                 f"SELECT * FROM {self._table} "  # noqa: S608
                 f"WHERE {where} LIMIT ?"
             )
-            params.append(limite)
+            params.append(limite if limite else -1)  # limite=0 : sans limite (comme en CSV)
             cur = conn.execute(query, params)
             colonnes = [desc[0] for desc in cur.description]
             mapping = resoudre_colonnes(colonnes)
@@ -1226,18 +1239,58 @@ class Lexique:
             return results
 
         # CSV/TSV : iterer sur tout l'index ortho
-        ortho_index = self._get_index_ortho()
-        all_entries = (e for entries in ortho_index.values() for e in entries)
-        return _recherche.filtrer(
-            all_entries,
-            cgram=cgram,
-            genre=genre,
-            nombre=nombre,
-            freq_min=freq_min,
-            freq_max=freq_max,
-            nb_syllabes=nb_syllabes,
+        return self._filtrer_csv(
             limite=limite,
+            cgram=cgram, genre=genre, nombre=nombre,
+            freq_min=freq_min, freq_max=freq_max, nb_syllabes=nb_syllabes,
+            age_min=age_min, age_max=age_max,
+            illustrable_min=illustrable_min, categorie=categorie,
+            has_age=has_age, has_phone=has_phone,
+            mode=mode, temps=temps, personne=personne,
         )
+
+    # Colonne(s) CSV lues par chaque critere de filtre (une suffit)
+    _COLONNES_CRITERES_CSV: dict[str, tuple[str, ...]] = {
+        "cgram": ("cgram",),
+        "genre": ("genre",),
+        "nombre": ("nombre",),
+        "nb_syllabes": ("nb_syllabes", "nbsyll", "syllabes", "syll"),
+        "age_min": ("age",),
+        "age_max": ("age",),
+        "has_age": ("age",),
+        "illustrable_min": ("illustrable",),
+        "categorie": ("categorie",),
+        "has_phone": ("phone",),
+        "mode": ("mode",),
+        "temps": ("temps",),
+        "personne": ("personne",),
+    }
+
+    def _filtrer_csv(self, *, limite: int = 100, **criteres: Any) -> list[dict[str, Any]]:
+        """Filtre CSV/TSV ; avertit si un critere porte sur une colonne absente du fichier.
+
+        Un tel critere n'est pas ignore : comme en SQL avec une valeur NULL,
+        aucune entree ne le satisfait (sauf ``has_age=False`` / ``has_phone=False``).
+        """
+        ortho_index = self._get_index_ortho()
+        premieres = next(iter(ortho_index.values()), [])
+        colonnes = set(premieres[0].keys()) if premieres else set()
+        absents = [
+            nom for nom, valeur in criteres.items()
+            if valeur is not None
+            and nom in self._COLONNES_CRITERES_CSV
+            and not colonnes.intersection(self._COLONNES_CRITERES_CSV[nom])
+        ]
+        if absents and colonnes:
+            warnings.warn(
+                "Critere(s) sur une colonne absente du fichier "
+                f"{self._source.name} : {', '.join(absents)}. "
+                "Aucune entree n'a de valeur pour ces colonnes.",
+                UserWarning,
+                stacklevel=3,
+            )
+        all_entries = (e for entries in ortho_index.values() for e in entries)
+        return _recherche.filtrer(all_entries, limite=limite, **criteres)
 
     def _filtrer_v4(
         self,
@@ -1306,7 +1359,7 @@ class Lexique:
             "LEFT JOIN lemmes l ON f.lemme_id = l.id "
             f"WHERE {where} LIMIT ?"
         )
-        params.append(limite)
+        params.append(limite if limite else -1)  # limite=0 : sans limite (comme en CSV)
         cur = conn.execute(query, params)
         results = []
         for row in cur.fetchall():
@@ -1402,14 +1455,14 @@ class Lexique:
             row = cur.fetchone()
             return int(row[0]) if row else 0
 
-        # CSV/TSV : compter via filtrer() sans limite
-        ortho_index = self._get_index_ortho()
-        all_entries = (e for entries in ortho_index.values() for e in entries)
-        return len(_recherche.filtrer(
-            all_entries,
+        # CSV/TSV : compter via le filtre sans limite (limite=0)
+        return len(self._filtrer_csv(
+            limite=0,
             cgram=cgram, genre=genre, nombre=nombre,
             freq_min=freq_min, freq_max=freq_max, nb_syllabes=nb_syllabes,
-            limite=0,
+            age_min=age_min, age_max=age_max,
+            illustrable_min=illustrable_min, categorie=categorie,
+            has_age=has_age, has_phone=has_phone,
         ))
 
     def exporter(
@@ -1509,13 +1562,43 @@ class Lexique:
                     conditions.append("f.phone IS NOT NULL AND f.phone != ''")
                 elif has_phone is False:
                     conditions.append("(f.phone IS NULL OR f.phone = '')")
+                colonnes_lemmes = {r[1] for r in conn.execute("PRAGMA table_info(lemmes)")}
+                if "age" in colonnes_lemmes:
+                    has_age = filter_kwargs.get("has_age")
+                    if has_age is True:
+                        conditions.append("l.age IS NOT NULL")
+                    elif has_age is False:
+                        conditions.append("l.age IS NULL")
+                    age_min = filter_kwargs.get("age_min")
+                    if age_min is not None:
+                        conditions.append("l.age >= ?")
+                        params.append(age_min)
+                    age_max = filter_kwargs.get("age_max")
+                    if age_max is not None:
+                        conditions.append("l.age <= ?")
+                        params.append(age_max)
+                # Criteres sans colonne correspondante dans une base v4/v5 : on le dit
+                non_geres = [
+                    k for k in ("nombre", "illustrable_min", "categorie")
+                    if filter_kwargs.get(k) is not None
+                ]
+                if "age" not in colonnes_lemmes:
+                    non_geres += [
+                        k for k in ("age_min", "age_max", "has_age")
+                        if filter_kwargs.get(k) is not None
+                    ]
+                if non_geres:
+                    warnings.warn(
+                        "Export d'une base v4/v5 : critere(s) non geres, ignores : "
+                        + ", ".join(non_geres),
+                        UserWarning,
+                        stacklevel=4,
+                    )
 
                 where = " AND ".join(conditions) if conditions else "1=1"
+                select = ", ".join(expr for _nom, expr, _typ in self._colonnes_export_v4(conn))
                 query = (
-                    "SELECT f.id, f.ortho, f.multext, f.phone, f.phone_reversed, "
-                    "f.nb_syllabes, f.syllabes, f.freq_opensubs, f.freq_frantext, "
-                    "f.freq_lm10, f.freq_frwac, f.freq_composite, f.source, "
-                    "l.lemme, l.cgram, l.genre "
+                    f"SELECT {select} "
                     "FROM formes f "
                     "LEFT JOIN lemmes l ON f.lemme_id = l.id "
                     f"WHERE {where}"
@@ -1561,11 +1644,7 @@ class Lexique:
                     if callback and count % batch_size == 0:
                         callback(count)
         else:
-            ortho_index = self._get_index_ortho()
-            all_entries = (e for entries in ortho_index.values() for e in entries)
-            for e in _recherche.filtrer(
-                all_entries, limite=limite, **filter_kwargs,
-            ):
+            for e in self._filtrer_csv(limite=limite, **filter_kwargs):
                 if colonnes:
                     entry = {k: v for k, v in e.items() if k in colonnes}
                 else:
@@ -1574,6 +1653,23 @@ class Lexique:
                 count += 1
                 if callback and count % batch_size == 0:
                     callback(count)
+
+    def _colonnes_export_v4(self, conn: sqlite3.Connection) -> list[tuple[str, str, str]]:
+        """Colonnes exportees d'une base v4/v5 : (nom, expression SQL, type).
+
+        Toutes les colonnes de ``formes`` (dont ``lemme_id``), puis ``lemme``,
+        ``cgram``, ``genre`` et ``age`` lus dans ``lemmes`` par jointure.
+        """
+        cols: list[tuple[str, str, str]] = [
+            (r[1], f"f.{r[1]}", r[2] or "TEXT")
+            for r in conn.execute("PRAGMA table_info(formes)")
+        ]
+        noms = {nom for nom, _e, _t in cols}
+        types_lemmes = {r[1]: (r[2] or "TEXT") for r in conn.execute("PRAGMA table_info(lemmes)")}
+        for nom in ("lemme", "cgram", "genre", "age"):
+            if nom in types_lemmes and nom not in noms:
+                cols.append((nom, f"l.{nom} AS {nom}", types_lemmes[nom]))
+        return cols
 
     def _exporter_csv(
         self,
@@ -1588,6 +1684,8 @@ class Lexique:
         # Determiner les noms de colonnes
         if colonnes:
             fieldnames = list(colonnes)
+        elif self._backend == "sqlite" and self._schema_version >= 4:
+            fieldnames = [nom for nom, _e, _t in self._colonnes_export_v4(self._get_conn())]
         elif self._backend == "sqlite":
             conn = self._get_conn()
             cur = conn.execute(f"PRAGMA table_info({self._table})")  # noqa: S608
@@ -1627,7 +1725,11 @@ class Lexique:
             output_path.unlink()
 
         # Determiner le schema des colonnes
-        if self._backend == "sqlite":
+        if self._backend == "sqlite" and self._schema_version >= 4:
+            all_col_defs = [
+                (nom, typ) for nom, _e, typ in self._colonnes_export_v4(self._get_conn())
+            ]
+        elif self._backend == "sqlite":
             conn_src = self._get_conn()
             cur = conn_src.execute(f"PRAGMA table_info({self._table})")  # noqa: S608
             col_info = cur.fetchall()

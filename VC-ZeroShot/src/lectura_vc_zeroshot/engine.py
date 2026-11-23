@@ -28,7 +28,7 @@ import librosa
 import numpy as np
 
 from lectura_vc_zeroshot._chargeur import ensure_models
-from lectura_vc_zeroshot._openvoice import OpenVoiceConverter, OV_SR
+from lectura_vc_zeroshot._openvoice import OpenVoiceConverter, OV_SR, avertir_tau
 from lectura_vc_zeroshot._presets import (
     PresetInconnu,
     has_preset,
@@ -116,6 +116,32 @@ def blend_se(
     return result
 
 
+class _methode_dossier:
+    """Méthode appelable sur la classe ou sur une instance.
+
+    Sur une instance, elle reçoit ``models_dir=self.models_dir`` (sauf si
+    ``models_dir`` est donné) ; sur la classe, le dossier par défaut. Garde la
+    compatibilité avec les anciens appels ``ZeroShotEngine.get_preset_se(...)``.
+    """
+
+    def __init__(self, fonction):
+        self._fonction = fonction
+        self.__doc__ = fonction.__doc__
+        self.__name__ = fonction.__name__
+
+    def __get__(self, instance, owner=None):
+        fonction = self._fonction
+        dossier = None if instance is None else instance.models_dir
+
+        def lie(*args, **kwargs):
+            kwargs.setdefault("models_dir", dossier)
+            return fonction(*args, **kwargs)
+
+        lie.__doc__ = fonction.__doc__
+        lie.__name__ = fonction.__name__
+        return lie
+
+
 class ZeroShotEngine:
     """Moteur de conversion vocale zero-shot via OpenVoice.
 
@@ -179,39 +205,48 @@ class ZeroShotEngine:
 
     # -- Presets ---------------------------------------------------------------
 
-    @staticmethod
-    def get_preset_se(name: str) -> np.ndarray:
-        """Charge un preregle par identifiant (dossier des modeles par defaut).
+    @_methode_dossier
+    def get_preset_se(name: str, models_dir: str | Path | None = None) -> np.ndarray:
+        """Charge un preregle par identifiant.
+
+        Appelee sur un moteur (``engine.get_preset_se(...)``), elle lit le
+        dossier du moteur (``engine.models_dir``) ; appelee sur la classe, le
+        dossier par defaut ($LECTURA_MODELS_DIR/vc, sinon ~/.lectura/models/vc).
 
         Parameters
         ----------
         name : "fr-f1", "melange-f" ou "melange-h".
+        models_dir : dossier des modeles VC (l'emporte sur celui du moteur).
 
         Returns
         -------
         np.ndarray shape (1, 256, 1) float32.
         """
-        return load_preset(name)
+        return load_preset(name, models_dir)
 
     @staticmethod
     def available_presets() -> list[str]:
         """Liste les presets disponibles."""
         return list_presets()
 
-    @staticmethod
-    def blend_preset_se(specs: dict[str, float]) -> np.ndarray:
+    @_methode_dossier
+    def blend_preset_se(specs: dict[str, float], models_dir: str | Path | None = None) -> np.ndarray:
         """Melange des presets avec des poids.
+
+        Meme regle de dossier que ``get_preset_se`` (celui du moteur sur une
+        instance, le dossier par defaut sur la classe).
 
         Parameters
         ----------
         specs : {nom_preset: poids}.
             Ex: {"fr-f1": 0.5, "melange-f": 0.5}
+        models_dir : dossier des modeles VC (l'emporte sur celui du moteur).
 
         Returns
         -------
         np.ndarray shape (1, 256, 1) float32.
         """
-        return blend_presets(specs)
+        return blend_presets(specs, models_dir)
 
     # -- Resolution de reference polymorphe ------------------------------------
 
@@ -315,7 +350,7 @@ class ZeroShotEngine:
         src_se: np.ndarray,
         tgt_se: np.ndarray,
         sr_in: int | None = None,
-        tau: float = 0.3,
+        tau: float | None = None,
     ) -> tuple[np.ndarray, int]:
         """Conversion avec speaker embeddings pre-calcules.
 
@@ -325,14 +360,16 @@ class ZeroShotEngine:
         src_se : speaker embedding source (1, 256, 1).
         tgt_se : speaker embedding cible (1, 256, 1).
         sr_in : sample rate source (auto si chemin).
-        tau : parametre OpenVoice (0 = deterministe).
+        tau : sans effet (le modele ONNX n'a pas cette entree ; conversion
+            deterministe). Garde pour compatibilite : DeprecationWarning s'il est donne.
 
         Returns
         -------
         (audio_converti @ 22050 Hz, 22050)
         """
+        avertir_tau(tau)
         conv = self._ensure_loaded()
-        return conv.convert(audio, src_se, tgt_se, sr=sr_in, tau=tau)
+        return conv.convert(audio, src_se, tgt_se, sr=sr_in)
 
     def convert(
         self,
@@ -341,7 +378,7 @@ class ZeroShotEngine:
         sr_in: int | None = None,
         ref_sr: int | None = None,
         sr_override: int | None = None,
-        tau: float = 0.3,
+        tau: float | None = None,
         variante: float | None = None,
     ) -> tuple[np.ndarray, int]:
         """Change le timbre d'un son (conversion zero-shot complete).
@@ -366,7 +403,8 @@ class ZeroShotEngine:
             extraction SE. OpenVoice traite comme 22050 → formants decales
             par facteur 22050/sr_override.
             Exemples: 11025 → voix aigue/enfant, 44100 → voix grave/homme.
-        tau : parametre OpenVoice (0 = deterministe).
+        tau : sans effet (le modele ONNX n'a pas cette entree ; conversion
+            deterministe). Garde pour compatibilite : DeprecationWarning s'il est donne.
         variante : curseur grave/aigu, -1 (plus grave, « homme ») a +1 (plus
             aigu, « enfant ») ; 0 ou None = timbre du preregle tel quel.
             Equivaut a sr_override = 22050 / 2**variante (et l'emporte sur lui).
@@ -375,6 +413,7 @@ class ZeroShotEngine:
         -------
         (audio_converti @ 22050 Hz, 22050) -- audio marque du filigrane IA.
         """
+        avertir_tau(tau)
         conv = self._ensure_loaded()
 
         # Extraire SE source
@@ -383,7 +422,7 @@ class ZeroShotEngine:
         # Resoudre SE cible (polymorphe)
         tgt_se = self.resolve_target_se(reference, ref_sr, sr_override, variante=variante)
 
-        return conv.convert(audio, src_se, tgt_se, sr=sr_in, tau=tau)
+        return conv.convert(audio, src_se, tgt_se, sr=sr_in)
 
     # -- Trick SR --------------------------------------------------------------
 

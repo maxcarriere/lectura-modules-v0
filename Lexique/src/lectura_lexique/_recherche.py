@@ -44,6 +44,16 @@ def rechercher(
     return results[:limite]
 
 
+def _nombre_ou_none(valeur: Any) -> float | None:
+    """Convertit une valeur de cellule en nombre ; vide ou illisible -> None."""
+    if valeur is None or valeur == "":
+        return None
+    try:
+        return float(valeur)
+    except (ValueError, TypeError):
+        return None
+
+
 def filtrer(
     entries_iter: Iterable[dict[str, Any]],
     *,
@@ -53,24 +63,48 @@ def filtrer(
     freq_min: float | None = None,
     freq_max: float | None = None,
     nb_syllabes: int | None = None,
+    age_min: float | None = None,
+    age_max: float | None = None,
+    illustrable_min: float | None = None,
+    categorie: str | None = None,
+    has_age: bool | None = None,
+    has_phone: bool | None = None,
+    mode: str | None = None,
+    temps: str | None = None,
+    personne: str | None = None,
     limite: int = 100,
 ) -> list[dict[str, Any]]:
     """Filtre multi-critere sur un iterateur d'entrees.
 
+    Memes criteres que la version SQLite. Une valeur absente ou vide
+    ne satisfait pas un critere qui la demande (comme NULL en SQL),
+    sauf ``has_age=False`` et ``has_phone=False``.
+
     Args:
         entries_iter: Iterateur d'entrees lexicales
         cgram: Filtre POS (prefix match)
-        genre: Filtre genre (m/f)
-        nombre: Filtre nombre (s/p)
+        genre: Filtre genre (egalite stricte, ex. m/f)
+        nombre: Filtre nombre (egalite stricte, ex. s/p)
         freq_min: Frequence minimale
         freq_max: Frequence maximale
         nb_syllabes: Nombre exact de syllabes
-        limite: Nombre max de resultats
+        age_min, age_max: Bornes sur la colonne ``age``
+        illustrable_min: Minimum sur la colonne ``illustrable``
+        categorie: Egalite sur la colonne ``categorie``
+        has_age: True = ``age`` renseigne, False = ``age`` vide
+        has_phone: True = ``phone`` renseigne, False = ``phone`` vide
+        mode, temps, personne: Egalite stricte sur ces colonnes
+        limite: Nombre max de resultats (0 ou moins = pas de limite)
 
     Returns:
         Liste d'entrees correspondantes
     """
     results: list[dict[str, Any]] = []
+    egalites = {
+        "genre": genre, "nombre": nombre, "categorie": categorie,
+        "mode": mode, "temps": temps, "personne": personne,
+    }
+    egalites = {k: v for k, v in egalites.items() if v is not None}
 
     for e in entries_iter:
         if cgram is not None:
@@ -78,13 +112,8 @@ def filtrer(
             if not e_cgram.startswith(cgram):
                 continue
 
-        if genre is not None:
-            if str(e.get("genre", "") or "") != genre:
-                continue
-
-        if nombre is not None:
-            if str(e.get("nombre", "") or "") != nombre:
-                continue
+        if any(str(e.get(k, "") or "") != str(v) for k, v in egalites.items()):
+            continue
 
         freq = 0.0
         try:
@@ -102,8 +131,28 @@ def filtrer(
             if nb != nb_syllabes:
                 continue
 
+        age = _nombre_ou_none(e.get("age"))
+        if has_age is True and age is None:
+            continue
+        if has_age is False and age is not None:
+            continue
+        if age_min is not None and (age is None or age < age_min):
+            continue
+        if age_max is not None and (age is None or age > age_max):
+            continue
+
+        if illustrable_min is not None:
+            illu = _nombre_ou_none(e.get("illustrable"))
+            if illu is None or illu < illustrable_min:
+                continue
+
+        if has_phone is not None:
+            a_phone = bool(str(e.get("phone", "") or ""))
+            if a_phone != has_phone:
+                continue
+
         results.append(e)
-        if len(results) >= limite:
+        if limite > 0 and len(results) >= limite:
             break
 
     return results

@@ -16,7 +16,12 @@ API publique :
   PresetInconnu   : levee pour un nom qui n'est ni un preregle ni un fichier audio
   LecturaModelesIndisponibles : fichiers absents et telechargement impossible
   MARQUE_IA       : True — toute sortie de conversion porte le filigrane IA (AI Act, art. 50 §2)
-  marquer_ia()    : la fonction de marquage appliquee a la sortie (controle par les services)
+  marquer_ia()    : la fonction de marquage appliquee a toute sortie (marquer_ia(audio, sr,
+                    message=None) ; message = 16 bits, 0x4C01 par defaut)
+  detecter()      : detecteur AudioSeal (ONNX) -> (p, bits)
+  marque_retrouvee() : regle de controle (p >= 0,5 et message 0x4C01)
+  metadonnees_wav() : ajoute les metadonnees IA (IPTC, LIST/INFO, XMP) a des octets WAV ;
+                    jamais appele automatiquement (les conversions rendent un tableau)
   FiligraneIndisponible : levee si le modele du filigrane manque ou est altere
 
 Ne pas retirer le marquage : obligation de l'art. 50 de l'AI Act.
@@ -28,13 +33,19 @@ from pathlib import Path
 
 import numpy as np
 
-from lectura_vc_zeroshot._filigrane import FiligraneIndisponible, marquer as marquer_ia
-from lectura_vc_zeroshot._openvoice import OV_SR
+from lectura_vc_zeroshot._filigrane import (
+    FiligraneIndisponible,
+    detecter,
+    marque_retrouvee,
+    marquer as marquer_ia,
+    metadonnees_wav,
+)
+from lectura_vc_zeroshot._openvoice import OV_SR, avertir_tau
 from lectura_vc_zeroshot._poids import LecturaModelesIndisponibles
 from lectura_vc_zeroshot._presets import PRESET_SPEAKERS, PresetInconnu
 from lectura_vc_zeroshot.engine import ZeroShotEngine, blend_se
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 # Convention Lectura (16/11/2026) : un paquet qui pose lui-meme le filigrane IA sur ses sorties le declare ici ;
 # les services (API Lectura) ne remarquent pas ses sorties, apres un controle au demarrage (marquer_ia + detecteur).
@@ -44,6 +55,9 @@ __all__ = [
     "MARQUE_IA",
     "marquer_ia",
     "FiligraneIndisponible",
+    "detecter",
+    "marque_retrouvee",
+    "metadonnees_wav",
     "creer_engine",
     "convertir",
     "ZeroShotEngine",
@@ -77,7 +91,7 @@ def convertir(
     sr_in: int | None = None,
     ref_sr: int | None = None,
     sr_override: int | None = None,
-    tau: float = 0.3,
+    tau: float | None = None,
     variante: float | None = None,
 ) -> tuple[np.ndarray, int]:
     """Convertit un audio vers le timbre d'une reference (commodite).
@@ -98,7 +112,8 @@ def convertir(
     ref_sr : sample rate de la reference si ndarray.
     sr_override : trick SR pour decaler les formants.
         11025 → voix aigue/enfant, 44100 → voix grave/homme.
-    tau : parametre OpenVoice (0 = deterministe).
+    tau : sans effet (le modele ONNX n'a pas cette entree ; conversion
+        deterministe). Garde pour compatibilite : DeprecationWarning s'il est donne.
     variante : curseur grave/aigu, -1 (plus grave) a +1 (plus aigu) ; 0 = preregle tel quel.
 
     Returns
@@ -107,6 +122,7 @@ def convertir(
 
     Ne pas retirer le marquage : obligation de l'art. 50 de l'AI Act.
     """
+    avertir_tau(tau, stacklevel=3)
     engine = creer_engine()
     return engine.convert(
         audio=audio,
@@ -114,6 +130,5 @@ def convertir(
         sr_in=sr_in,
         ref_sr=ref_sr,
         sr_override=sr_override,
-        tau=tau,
         variante=variante,
     )

@@ -111,9 +111,9 @@ def test_fr_f1_identique_a_la_dev1(installation, tmp_path):
         "from lectura_vc_zeroshot import _filigrane as F\n"
         "e = Z.creer_engine(models_dir=sys.argv[1])\n"
         "x = np.load(sys.argv[2]); se = np.load(sys.argv[3])\n"
-        "marque, _ = e.convert(x, se, sr_in=22050, tau=0.0)\n"
+        "marque, _ = e.convert(x, se, sr_in=22050)\n"
         "F.marquer = lambda a, sr, message=None: a\n"
-        "brut, _ = e.convert(x, se, sr_in=22050, tau=0.0)\n"
+        "brut, _ = e.convert(x, se, sr_in=22050)\n"
         "np.savez(sys.argv[4], marque=marque, brut=brut)\n"
     )
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
@@ -126,13 +126,13 @@ def test_fr_f1_identique_a_la_dev1(installation, tmp_path):
     from lectura_vc_zeroshot import _filigrane as F
     assert Z.__version__ == "1.3.0"
     e = Z.creer_engine(models_dir=vc)
-    marque, sr = e.convert(np.load(entree), "fr-f1", sr_in=SR, tau=0.0)
+    marque, sr = e.convert(np.load(entree), "fr-f1", sr_in=SR)
     assert sr == SR
     np.testing.assert_allclose(marque, attendu["marque"], atol=1e-5)
     vrai = F.marquer
     try:
         F.marquer = lambda a, sr, message=None: a
-        brut, _ = e.convert(np.load(entree), "fr-f1", sr_in=SR, tau=0.0)
+        brut, _ = e.convert(np.load(entree), "fr-f1", sr_in=SR)
     finally:
         F.marquer = vrai
     np.testing.assert_allclose(brut, attendu["brut"], atol=1e-5)
@@ -149,7 +149,7 @@ def moteur(installation):
 @pytest.mark.parametrize("voix", ["fr-f1", "melange-f", "melange-h"])
 def test_conversion_filigranee(moteur, voix):
     from lectura_vc_zeroshot import _filigrane as F
-    sortie, sr = moteur.convert(_voix(SR), voix, sr_in=SR, tau=0.3)
+    sortie, sr = moteur.convert(_voix(SR), voix, sr_in=SR)
     assert sr == SR and sortie.dtype == np.float32 and np.isfinite(sortie).all()
     assert 0.01 < np.abs(sortie).max() <= 1.0
     p, bits = F.detecter(sortie, sr)
@@ -179,7 +179,7 @@ def test_temoin_non_marque(moteur):
     vrai = F.marquer
     try:
         F.marquer = lambda a, sr, message=None: a
-        brut, sr = moteur.convert(_voix(SR), "melange-h", sr_in=SR, tau=0.0)
+        brut, sr = moteur.convert(_voix(SR), "melange-h", sr_in=SR)
     finally:
         F.marquer = vrai
     assert not F.marque_retrouvee(*F.detecter(brut, sr))
@@ -198,9 +198,9 @@ def _f0_mediane(y, sr):
 def test_variante_zero_identique(moteur, voix):
     """variante=0 (ou sr_override=22050) : même sortie qu'avant le curseur."""
     x = _voix(SR)
-    a, _ = moteur.convert(x, voix, sr_in=SR, tau=0.0)
-    b, _ = moteur.convert(x, voix, sr_in=SR, tau=0.0, variante=0.0)
-    c, _ = moteur.convert(x, voix, sr_in=SR, tau=0.0, sr_override=22050)
+    a, _ = moteur.convert(x, voix, sr_in=SR)
+    b, _ = moteur.convert(x, voix, sr_in=SR, variante=0.0)
+    c, _ = moteur.convert(x, voix, sr_in=SR, sr_override=22050)
     np.testing.assert_array_equal(a, b)
     np.testing.assert_array_equal(a, c)
 
@@ -212,7 +212,7 @@ def test_variante_grave_aigu_filigrane(moteur, voix):
     x = _voix(SR, 5.0)
     f0 = {}
     for v in (-1.0, 0.0, 1.0):
-        y, sr = moteur.convert(x, voix, sr_in=SR, tau=0.0, variante=v)
+        y, sr = moteur.convert(x, voix, sr_in=SR, variante=v)
         f0[v] = _f0_mediane(y, sr)
         assert F.marque_retrouvee(*F.detecter(y, sr)), (voix, v)
     print(voix, {k: round(v, 1) for k, v in f0.items()})

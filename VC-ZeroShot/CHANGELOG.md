@@ -1,5 +1,17 @@
 # Changements
 
+## 1.4.0 (23/11/2026, corrections)
+
+- `tau` (`convert`, `convert_from_se`, `convertir`, `OpenVoiceConverter.convert`) est sans effet : le modèle ONNX
+  n'a pas cette entrée. Paramètre gardé pour compatibilité, défaut `None`, `DeprecationWarning` s'il est donné ;
+  il n'est plus transmis.
+- `detecter`, `marque_retrouvee` et `metadonnees_wav` sont exportés par le paquet (`from lectura_vc_zeroshot import
+  detecter`) ; `_filigrane` reste importable.
+- `engine.get_preset_se` / `engine.blend_preset_se` lisent le dossier du moteur (`models_dir`) ; sur la classe,
+  dossier par défaut ; nouveau paramètre `models_dir=`.
+- README : métadonnées WAV jamais automatiques (exemple d'écriture), `marquer_ia(message=...)`, `tau`. Le filigrane
+  reste posé sur toute sortie, sans option pour le désactiver.
+
 ## 1.3.0 (republication v0, 2026)
 
 - Marquage IA (AI Act, art. 50) : toute sortie porte le filigrane AudioSeal (message 16 bits `0x4C01`), sans option

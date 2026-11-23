@@ -32,7 +32,7 @@ from pathlib import Path
 from lectura_graphemiseur import _poids
 from lectura_graphemiseur._poids import LecturaModelesIndisponibles
 
-__version__ = "4.3.9"
+__version__ = "4.4.0"
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +84,7 @@ def _resoudre_lexique(
 
     1. Chemin explicite (si passe)
     2. Fichier JSON dans le dossier modeles resolu
-    3. lectura_lexique installe -> generer le dict
-    4. None (pas de lexique -> lex_features = zeros)
+    3. None (pas de lexique -> lex_features = zeros)
     """
     if lexicon_path is not None:
         return lexicon_path
@@ -93,20 +92,9 @@ def _resoudre_lexique(
         json_path = models_dir / "lexique_pos_candidates.json"
         if json_path.exists():
             return json_path
-    try:
-        from lectura_lexique import Lexique
-        lex = Lexique()
-        result: dict[str, list[str]] = {}
-        for mot, entrees in lex._index.items():
-            pos_set: set[str] = set()
-            for e in entrees:
-                if hasattr(e, "pos") and e.pos:
-                    pos_set.add(e.pos)
-            if pos_set:
-                result[mot] = sorted(pos_set)
-        return result
-    except (ImportError, Exception):
-        pass
+    # Plus de construction automatique depuis lectura-lexique (retirée le 23/11/2026) : sans base fournie par
+    # l'utilisateur, elle échouait toujours en silence ; mesurée avec un lexique fourni, l'aide est négligeable
+    # (+0,01 point de mots justes sur le test du cadre). Un lexique de catégories reste utilisable par lexicon_path.
     return None
 
 
@@ -159,28 +147,6 @@ def _resoudre_phone_lexicon(models_dir: Path | None):
     return None
 
 
-def _resoudre_correcteur(models_dir: Path | None) -> Path | None:
-    """Cascade de resolution du correcteur P2G neuronal.
-
-    Cherche correcteur_p2g_char_encoder_int8.onnx dans :
-    1. Dossier modeles resolu (models_dir)
-    2. Dossier utilisateur (~/.lectura/models/p2g/)
-    3. Site-packages (modeles/ du package)
-
-    Returns None si le correcteur n'est pas installe (degradation gracieuse).
-    """
-    candidats: list[Path] = []
-    if models_dir is not None:
-        candidats.append(models_dir)
-    candidats.append(Path.home() / ".lectura" / "models" / "p2g")
-    candidats.append(_MODELES_DIR)
-
-    for d in candidats:
-        if (d / "correcteur_p2g_char_encoder_int8.onnx").exists():
-            return d
-    return None
-
-
 def creer_engine(
     mode: str = "auto",
     models_dir: str | Path | None = None,
@@ -219,8 +185,15 @@ def creer_engine(
     base = resolved_dir
     force_version = os.environ.get("LECTURA_P2G_VERSION", "").lower()
     if force_version == "v6":
+        # Usage interne : le modele V6 n'est pas publie (seul V7 l'est)
         model_onnx = base / "unifie_p2g_v6_int8.onnx"
         model_vocab = base / "unifie_p2g_v6_vocab.json"
+        if not model_onnx.exists():
+            raise FileNotFoundError(
+                f"LECTURA_P2G_VERSION=v6 demande {model_onnx.name}, absent de {base} : "
+                "le modele V6 n'est pas publie. Retirez la variable LECTURA_P2G_VERSION "
+                "pour utiliser le modele V7 publie."
+            )
     elif (base / "unifie_p2g_v7_int8.onnx").exists():
         model_onnx = base / "unifie_p2g_v7_int8.onnx"
         model_vocab = base / "unifie_p2g_v7_vocab.json"
@@ -237,16 +210,6 @@ def creer_engine(
         model_onnx = base / "unifie_p2g_v3_int8.onnx"
         model_vocab = base / "unifie_p2g_v3_vocab.json"
     resolved_lexicon = _resoudre_lexique(lexicon_path, resolved_dir)
-
-    # Charger le correcteur P2G si disponible
-    correcteur = None
-    correcteur_dir = _resoudre_correcteur(resolved_dir)
-    if correcteur_dir:
-        try:
-            from lectura_graphemiseur.inference_correcteur import CorrecteurP2GInference
-            correcteur = CorrecteurP2GInference(correcteur_dir)
-        except (ImportError, FileNotFoundError, Exception) as e:
-            logger.info("Correcteur P2G non charge: %s", e)
 
     engine = None
     erreur_onnx: Exception | None = None
@@ -317,8 +280,6 @@ def creer_engine(
             f"et que les poids sont presents dans {base}."
         ) from erreur_onnx
 
-    # Attacher le correcteur P2G a l'engine (optionnel)
-    engine.correcteur = correcteur
     return engine
 
 
