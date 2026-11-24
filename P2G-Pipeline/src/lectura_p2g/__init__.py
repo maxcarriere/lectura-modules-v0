@@ -24,7 +24,7 @@ import json
 import unicodedata
 from importlib import resources
 
-__version__ = "4.7.0"
+__version__ = "4.7.1"
 
 # ── Re-exports depuis le graphemiseur (couche 1) ─────────────────────
 

@@ -1,5 +1,19 @@
 # Journal des versions des modules Lectura v0
 
+## 24/11/2026 : version de maintenance (correctifs mineurs)
+
+Les poids publiés sur Hugging Face ne changent pas. Tokeniseur, Diphone et VC-ZeroShot sont inchangés.
+
+| Paquet | Version | Changement |
+|---|---|---|
+| lectura-formules | 3.8.1 | `lire_intervalle` lit aussi la forme écrite : « de 3 à 5 » → « de trois à cinq » (elle était épelée « dé-e-trois-à-cinq ») ; README : accents |
+| lectura-lexique | 1.6.1 | bases v4/v5 : `filtrer()` et `compter()` appliquent `genre`, `nombre` et `personne` même sans `cgram` (ils étaient ignorés sans message) ; `iter_sqlite` ouvre la base en lecture seule et lève `FileNotFoundError` sur un chemin absent (au lieu de créer une base vide) ; README : accents |
+| lectura-aligneur | 4.0.7 | lettre fusionnée : « taxi » donne les syllabes `ta`, `x²i` (et non `xx²i`), de même « examen », « boxer », « xylophone » ; README : accents |
+| lectura-phonemiseur | 4.2.3 | propriété publique `ResultatPhraseG2P.groupes` (groupes de lecture) ; README : accents |
+| lectura-graphemiseur | 4.4.3 | README : accents |
+| lectura-g2p | 4.2.1 | groupes de lecture accessibles par `result.groupes` (l'attribut `_groupes` reste lisible) ; dépend de lectura-phonemiseur >= 4.2.3 ; statut « Production/Stable » comme les autres paquets v0 ; README : accents et exemple des groupes |
+| lectura-p2g | 4.7.1 | statut « Production/Stable » comme les autres paquets v0 ; README : accents |
+
 ## 23/11/2026, soir (2) : documentation seulement
 
 phonemiseur 4.2.2 et graphemiseur 4.4.2 : résultats aussi sur le corpus d'évaluation de Lectura (phrases ordinaires), en plus de CSF18 (phrases difficiles) et de WikiPron.

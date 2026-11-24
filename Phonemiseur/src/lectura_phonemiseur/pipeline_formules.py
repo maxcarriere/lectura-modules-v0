@@ -92,6 +92,23 @@ class ResultatPhraseG2P:
             if m.lecture is not None
         }
 
+    @property
+    def groupes(self) -> list[Any]:
+        """Groupes de lecture (``GroupeLecture``) de la phrase.
+
+        Ceux attachés par ``lectura_g2p.analyser_phrase()`` (avec ses
+        ``options_groupes``) ; à défaut, calculés à la première lecture par
+        ``construire_groupes_lecture()`` avec les options par défaut.
+        Remplace l'attribut privé ``_groupes``, qui reste lisible.
+        """
+        groupes = getattr(self, "_groupes", None)
+        if groupes is None:
+            from lectura_phonemiseur.groupes_lecture import construire_groupes_lecture
+
+            groupes = construire_groupes_lecture(self)
+            self._groupes = groupes
+        return groupes
+
 
 # ── Placeholder ──────────────────────────────────────────────────────────
 

@@ -906,7 +906,23 @@ def _build_syllabes(
             else:
                 # ² intra-syllabe
                 clean = gr.replace("²", "")
-                if clean:
+                prev_gr, prev_sp = mapped[j - 1][1], mapped[j - 1][2]
+                meme_lettre = (
+                    clean
+                    and sp[0] < sp[1]
+                    and sp == prev_sp
+                    and clean.replace("°", "") == prev_gr.replace("°", "").replace("²", "")
+                )
+                if meme_lettre:
+                    # "x" puis "x²" sur la même lettre (taxi /ks/) : une seule
+                    # lettre qui produit deux phonèmes, on écrit « x² » et non « xx² »
+                    syll_ortho_parts.append("")
+                    for k in range(j - 1, -1, -1):
+                        if syll_ortho_parts[k].replace("°", "").replace("²", ""):
+                            if not syll_ortho_parts[k].endswith("²"):
+                                syll_ortho_parts[k] += "²"
+                            break
+                elif clean:
                     # "y²" en milieu de syllabe → garder avec marqueur
                     syll_ortho_parts.append(gr)
                 else:

@@ -5,14 +5,14 @@ Génération v0 (2026) de Lectura — https://www.lectura.world/developpement/mo
 Complete French grapheme-to-phoneme pipeline — text to IPA phonetics.
 Combines tokenizer, formula reader, and neural phonemizer.
 
-*Pipeline G2P complet du francais — texte vers phonetique IPA.
-Combine tokeniseur, lecteur de formules et phonemiseur neural.*
+*Pipeline G2P complet du français — texte vers phonétique IPA.
+Combine tokeniseur, lecteur de formules et phonémiseur neuronal.*
 
 ## Installation
 
 ```bash
 pip install lectura-g2p              # pipeline complet
-pip install lectura-g2p[aligneur]    # + alignement grapheme-phoneme et syllabation
+pip install lectura-g2p[aligneur]    # + alignement graphème-phonème et syllabation
 ```
 
 ## Modèles
@@ -34,10 +34,14 @@ from lectura_g2p import analyser_phrase, creer_engine
 
 engine = creer_engine()
 
-# Texte → mots, phonetique IPA, categories, liaisons
+# Texte → mots, phonétique IPA, catégories, liaisons
 result = analyser_phrase("Bonjour, il est 14h30.", engine=engine)
 print(result.tokens)
 print(result.phones)
+
+# Groupes de lecture (liaisons, élisions, enchaînements), depuis 4.2.1
+for g in result.groupes:
+    print(g.text, g.jonctions)
 ```
 
 ### Phrases IPA (usage TTS)
@@ -55,18 +59,18 @@ for ipa, type_phrase in texte_vers_phrases_ipa("Bonjour. Comment vas-tu ?", engi
 ```python
 from lectura_g2p import analyser_phrase
 
-result = analyser_phrase("Les enfants jouent.", syllabifier=True)   # necessite lectura-aligneur
+result = analyser_phrase("Les enfants jouent.", syllabifier=True)   # nécessite lectura-aligneur
 print(result.format_ligne2())
 ```
 
-`aligner_pour_corpus()` (preparation des corpus d'entrainement) n'est pas disponible dans la v0 : elle reposait
-sur des outils internes absents de `lectura-aligneur` et leve `NotImplementedError`. Pour l'alignement
-grapheme-phoneme, utiliser `lectura_aligneur.LecturaSyllabeur`.
+`aligner_pour_corpus()` (préparation des corpus d'entraînement) n'est pas disponible dans la v0 : elle reposait
+sur des outils internes absents de `lectura-aligneur` et lève `NotImplementedError`. Pour l'alignement
+graphème-phonème, utiliser `lectura_aligneur.LecturaSyllabeur`.
 
 ## Architecture
 
-- **Couche 1** : `lectura-phonemiseur` — modele G2P neural BiLSTM (poids telecharges au premier usage, voir « Modèles »)
-- **Couche 2** : `lectura-g2p` — pipeline complet (tokeniseur + formules + phonemiseur + groupes de lecture)
+- **Couche 1** : `lectura-phonemiseur` — modèle G2P neural BiLSTM (poids téléchargés au premier usage, voir « Modèles »)
+- **Couche 2** : `lectura-g2p` — pipeline complet (tokeniseur + formules + phonémiseur + groupes de lecture)
 - **Backend** : ONNX Runtime, en local
 
 ## Licence

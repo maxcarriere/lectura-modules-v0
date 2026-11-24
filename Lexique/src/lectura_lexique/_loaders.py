@@ -79,9 +79,23 @@ def iter_sqlite(
     path: str | Path,
     table: str = "formes",
 ) -> Iterator[EntreeLexicale]:
-    """Itere sur une table SQLite et produit des EntreeLexicale."""
+    """Itere sur une table SQLite et produit des EntreeLexicale.
+
+    La base est ouverte en lecture seule (``mode=ro``) : elle n'est jamais
+    modifiee, et un chemin absent leve ``FileNotFoundError`` au lieu de
+    creer une base vide.
+    """
     path = Path(path)
-    conn = sqlite3.connect(str(path))
+    if not path.is_file():
+        raise FileNotFoundError(f"Base lexicale introuvable : {path}")
+    uri = path.resolve().as_uri() + "?mode=ro"
+    conn = sqlite3.connect(uri, uri=True)
+    try:
+        conn.execute("SELECT 1 FROM sqlite_master LIMIT 1")
+    except sqlite3.OperationalError:
+        # Base WAL dans un dossier non inscriptible : lecture immuable
+        conn.close()
+        conn = sqlite3.connect(uri + "&immutable=1", uri=True)
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.execute(f"SELECT * FROM {table}")  # noqa: S608

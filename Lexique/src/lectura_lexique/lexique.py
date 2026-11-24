@@ -22,6 +22,7 @@ from lectura_lexique._aliases import resoudre_colonnes
 from lectura_lexique._loaders import iter_csv, iter_tsv
 from lectura_lexique._multext import decoder_multext as _decoder_multext
 from lectura_lexique._multext import filtre_multext as _filtre_multext
+from lectura_lexique._multext import motifs_multext as _motifs_multext
 from lectura_lexique._types import Categorie, Concept, EntreeForme, EntreeLemme, EntreeLexicale
 from lectura_lexique._utils import normaliser_ortho
 
@@ -1316,13 +1317,14 @@ class Lexique:
         params: list[Any] = []
 
         # Multext pattern pour genre/nombre/mode/temps/personne
-        multext_pattern = _filtre_multext(
+        # Sans cgram, genre/nombre/personne restent appliques (un motif par categorie)
+        motifs = _motifs_multext(
             pos=cgram, mode=mode, temps=temps,
             personne=personne, nombre=nombre, genre=genre,
         )
-        if multext_pattern and multext_pattern != "%":
-            conditions.append("f.multext LIKE ?")
-            params.append(multext_pattern)
+        if motifs:
+            conditions.append("(" + " OR ".join(["f.multext LIKE ?"] * len(motifs)) + ")")
+            params.extend(motifs)
         elif cgram:
             conditions.append("l.cgram LIKE ?")
             params.append(f"{cgram}%")
@@ -1400,12 +1402,12 @@ class Lexique:
                 # v4 : utiliser le meme schema que _filtrer_v4
                 conditions: list[str] = []
                 params: list[Any] = []
-                multext_pattern = _filtre_multext(
-                    pos=cgram, nombre=nombre, genre=genre,
-                )
-                if multext_pattern and multext_pattern != "%":
-                    conditions.append("f.multext LIKE ?")
-                    params.append(multext_pattern)
+                motifs = _motifs_multext(pos=cgram, nombre=nombre, genre=genre)
+                if motifs:
+                    conditions.append(
+                        "(" + " OR ".join(["f.multext LIKE ?"] * len(motifs)) + ")"
+                    )
+                    params.extend(motifs)
                 elif cgram:
                     conditions.append("l.cgram LIKE ?")
                     params.append(f"{cgram}%")

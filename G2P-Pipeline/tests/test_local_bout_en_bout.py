@@ -88,3 +88,19 @@ def test_phrase(engine):
     r = analyser_phrase("Les enfants jouent dans le jardin.", engine=engine)
     phones = [m.phone for m in r.mots if not m.est_ponctuation]
     assert phones == ["le", "ɑ̃fɑ̃", "ʒu", "dɑ̃", "lə", "ʒaʁdɛ̃"]
+
+
+def test_groupes_public(engine):
+    """Correctif du 24/11/2026 : groupes de lecture accessibles par ``.groupes``."""
+    from lectura_g2p import OptionsGroupes, analyser_phrase
+
+    r = analyser_phrase("Les enfants jouent.", engine=engine)
+    assert r.groupes is r._groupes  # l'ancien attribut privé reste lisible
+    assert [g.text for g in r.groupes][:2] == ["Les enfants", "jouent"]
+    assert r.groupes[0].jonctions == ["liaison_z"]
+
+    sans = analyser_phrase(
+        "Les enfants jouent.", engine=engine,
+        options_groupes=OptionsGroupes(gerer_liaisons=False, gerer_enchainement=False),
+    )
+    assert [g.text for g in sans.groupes][:2] == ["Les", "enfants"]

@@ -2,9 +2,9 @@
 
 Génération v0 (2026) de Lectura — https://www.lectura.world/developpement/modules/v0/
 
-Lecture algorithmique des formules pour le francais : nombres, sigles, dates, telephones, heures, monnaies, ordinaux, fractions, scientifiques, mathematiques, GPS, etc.
+Lecture algorithmique des formules pour le français : nombres, sigles, dates, téléphones, heures, monnaies, ordinaux, fractions, scientifiques, mathématiques, GPS, etc.
 
-Module autonome, zero dependance externe.
+Module autonome, zéro dépendance externe.
 
 ## Installation
 
@@ -28,7 +28,7 @@ print(lire_formule("nombre", "42").display_fr)   # "quarante-deux"
 
 ### Enrichir les tokens du tokeniseur Lectura
 
-`enrichir_formules()` complete, sur place, les tokens de type `FORMULE` produits par `lectura-tokeniseur`
+`enrichir_formules()` complète, sur place, les tokens de type `FORMULE` produits par `lectura-tokeniseur`
 (attributs `display_fr` et `lecture`) :
 
 ```python
@@ -61,11 +61,11 @@ if wav:
 
 | Fonction | Description |
 |---|---|
-| `lire_formule(type, texte)` | Lit une formule dont le type est donne ("nombre", "date", "heure", "sigle"...) |
+| `lire_formule(type, texte)` | Lit une formule dont le type est donné ("nombre", "date", "heure", "sigle"...) |
 | `lire_nombre(texte)` | Nombres : "42" -> "quarante-deux" |
 | `lire_date(texte)` | Dates : "25/12/2024" -> "vingt-cinq-décembre-deux-mille-vingt-quatre" |
 | `lire_heure(texte)` | Heures : "14h30" -> "quatorze-heures-trente" |
-| `lire_telephone(texte)` | Telephones : "06 12 34 56 78" |
+| `lire_telephone(texte)` | Téléphones : "06 12 34 56 78" |
 | `lire_sigle(texte)` | Sigles : "SNCF" -> "esse-enne-cé-effe" |
 | `lire_ordinal(texte)` | Ordinaux : "3e" -> "troisième" |
 | `lire_fraction(texte)` | Fractions : "3/4" -> "trois-quarts" |
@@ -76,11 +76,11 @@ if wav:
 | `lire_abv(texte)` | Abréviations : "M." -> "monsieur" (sinon épelées) |
 | `lire_unite(texte)` | Unités : "km/h" -> "kilomètre-par-heure" |
 | `lire_scientifique`, `lire_maths`, `lire_numero`, `lire_gps`, `lire_page_chapitre` | Autres types, aussi accessibles par `lire_formule` |
-| `enrichir_formules(tokens)` | Enrichit les tokens FORMULE d'une phrase tokenisee |
+| `enrichir_formules(tokens)` | Enrichit les tokens FORMULE d'une phrase tokenisée |
 | `int_to_roman(n)` / `roman_to_int(s)` | Chiffres romains |
 
-`lire_formule` accepte 18 types : nombre, sigle, date, telephone, ordinal, fraction, scientifique, maths, numero,
-heure, monnaie, pourcentage, intervalle, gps, page_chapitre, romain, abv, unite (un type inconnu est épelé).
+`lire_formule` accepte 18 types : `nombre`, `sigle`, `date`, `telephone`, `ordinal`, `fraction`, `scientifique`, `maths`, `numero`,
+`heure`, `monnaie`, `pourcentage`, `intervalle`, `gps`, `page_chapitre`, `romain`, `abv`, `unite` (un type inconnu est épelé).
 
 Heures : les minutes nulles ne sont pas lues ("14h00" -> "quatorze-heures") ; avec
 `OptionsLecture(heure_minuit_midi=True)`, "12h00" -> "midi" et "0h00" -> "minuit".

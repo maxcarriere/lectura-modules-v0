@@ -17,7 +17,7 @@ Exemple rapide::
     result = analyser_phrase("Les enfants jouent dans le jardin.")
 """
 
-__version__ = "4.2.0"
+__version__ = "4.2.1"
 
 # ── Re-exports depuis le phonemiseur (couche 1) ──────────────────────────
 
@@ -88,7 +88,8 @@ def analyser_phrase(
     Returns
     -------
     ResultatPhraseG2P
-        Resultat avec mots analyses et groupes de lecture.
+        Resultat avec mots analyses et groupes de lecture (propriete
+        ``groupes``, liste de ``GroupeLecture``).
         Si ``syllabifier=True``, retourne un ResultatSyllabation.
     """
     from lectura_tokeniseur import normalise, tokenise
@@ -112,7 +113,8 @@ def analyser_phrase(
             )
         return LecturaSyllabeur().analyser_complet(groupes=groupes)
 
-    # Attacher les groupes au resultat
+    # Attacher les groupes au resultat : lus par la propriete publique
+    # ``result.groupes`` (``_groupes`` reste en place pour l'ancien code)
     result._groupes = groupes
     return result
 

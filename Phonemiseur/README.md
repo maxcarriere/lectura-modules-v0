@@ -2,21 +2,21 @@
 
 Génération v0 (2026) de Lectura — https://www.lectura.world/developpement/modules/v0/
 
-**Phonemiseur neural du francais : G2P + POS + Morphologie + Liaison + Groupes de lecture**
+**Phonemiseur neural du français : G2P + POS + Morphologie + Liaison + Groupes de lecture**
 
-Un seul modele BiLSTM char-level multi-tete (1.75M parametres, ONNX INT8 = 1.8 Mo) qui predit simultanement :
+Un seul modèle BiLSTM char-level multi-tête (1.75M paramètres, ONNX INT8 = 1.8 Mo) qui prédit simultanément :
 
-- **G2P** : transcription phonemique IPA
-- **POS** : etiquetage morpho-syntaxique — 19 tags
+- **G2P** : transcription phonémique IPA
+- **POS** : étiquetage morpho-syntaxique — 19 tags
 - **Morphologie** : genre, nombre, temps, mode, personne, forme verbale
-- **Liaison** : prediction des liaisons obligatoires/facultatives
+- **Liaison** : prédiction des liaisons obligatoires/facultatives
 
 Résultats mesurés : voir « Résultats ».
 
-Tout tourne en local (ONNX Runtime). Les poids du modele (1,9 Mo) sont telecharges depuis Hugging Face au premier usage,
-puis gardes sur le disque ; ils sont sous licence CC BY-NC 4.0 (voir « Modèles »).
+Tout tourne en local (ONNX Runtime). Les poids du modèle (1,9 Mo) sont téléchargés depuis Hugging Face au premier usage,
+puis gardés sur le disque ; ils sont sous licence CC BY-NC 4.0 (voir « Modèles »).
 
-## Demarrage rapide
+## Démarrage rapide
 
 ### Installation
 
@@ -25,17 +25,17 @@ pip install lectura-phonemiseur             # installe aussi onnxruntime et nump
 pip install "lectura-phonemiseur[formules]" # + lectura-formules, requis par analyser_phrase_complete()
 ```
 
-`analyser_phrase_complete()` (phrase tokenisee avec formules : nombres, dates, heures...) a besoin de
-`lectura-formules` ; sans lui, l'importer leve une `ImportError` qui indique quoi installer. Le reste du paquet
+`analyser_phrase_complete()` (phrase tokenisée avec formules : nombres, dates, heures...) a besoin de
+`lectura-formules` ; sans lui, l'importer lève une `ImportError` qui indique quoi installer. Le reste du paquet
 fonctionne sans.
 
-### Utilisation rapide (factory — recommande)
+### Utilisation rapide (factory — recommandé)
 
 ```python
 from lectura_phonemiseur import creer_engine
 from lectura_phonemiseur.tokeniseur import tokeniser
 
-# Premier appel : telecharge les poids (1,9 Mo) dans ~/.lectura/models/g2p/
+# Premier appel : télécharge les poids (1,9 Mo) dans ~/.lectura/models/g2p/
 engine = creer_engine()
 
 tokens = tokeniser("Les enfants sont arrivés à la maison.")
@@ -48,18 +48,18 @@ print(result["liaison"])  # ['Lz', 'none', 'Lt', 'none', 'none', 'none', 'none',
 print(result["morpho"])   # {'Number': ['Plur', ...], 'Gender': [...], ...}
 ```
 
-Modes disponibles : `"auto"` (defaut, ONNX Runtime), `"local"`, `"onnx"`.
+Modes disponibles : `"auto"` (défaut, ONNX Runtime), `"local"`, `"onnx"`.
 
-### Separateurs pour mots composes
+### Séparateurs pour mots composés
 
-Le modele V4 gere nativement les separateurs dans les mots composes et les elisions :
+Le modèle V4 gère nativement les séparateurs dans les mots composés et les élisions :
 
 ```python
-# IPA plat (defaut)
+# IPA plat (défaut)
 result = engine.analyser(["abat-jour", "d'abord"])
 print(result["g2p"])  # ['abaʒuʁ', 'dabɔʁ']
 
-# Avec separateurs preserves
+# Avec séparateurs préservés
 result = engine.analyser(["abat-jour", "d'abord"], sep_hyphen=True, sep_apos=True)
 print(result["g2p"])  # ['aba-ʒuʁ', "d'abɔʁ"]
 ```
@@ -77,7 +77,7 @@ Les usages suivants n'utilisent plus le réseau.
   indique les fichiers attendus, leurs empreintes et comment les poser à la main.
 - Poids sous licence CC BY-NC 4.0 (usage non commercial) ; usage commercial inclus dans toute licence commerciale Lectura v1 en cours de validité, autres cas sur demande : https://www.lectura.world/contact/
 
-## Backend d'inference
+## Backend d'inférence
 
 Le paquet tourne avec ONNX Runtime (environ 2 ms par phrase sur CPU). Les modes `"numpy"` et `"pure"` ne sont pas
 disponibles dans la v0 : ils demandent des poids convertis (JSON) qui ne sont pas publiés, et
@@ -85,7 +85,7 @@ disponibles dans la v0 : ils demandent des poids convertis (JSON) qui ne sont pa
 
 ## Features lexicales (optionnel)
 
-Le modele accepte en entree optionnelle un vecteur de 24 dimensions par mot, construit a partir d'un lexique de candidats POS. Cela ameliore la prediction POS, la morphologie et les liaisons.
+Le modèle accepte en entrée optionnelle un vecteur de 24 dimensions par mot, construit à partir d'un lexique de candidats POS. Cela améliore la prédiction POS, la morphologie et les liaisons.
 
 Aucun lexique n'est chargé par défaut. On peut en fournir un par le paramètre `lexicon_path` de `creer_engine()` : un fichier JSON `{"mot": ["NOM", "VER", ...]}` (catégories de Lexique 3). Mesure du 23/11/2026 sur le test du corpus du cadre (2 409 phrases) : l'aide est négligeable (+0,01 point de mots justes, +0,2 point sur les homographes). Sans lexique, le modèle fonctionne normalement (features = zéros).
 
@@ -96,7 +96,7 @@ engine = creer_engine()
 # Avec un lexique de catégories fourni
 engine = creer_engine(lexicon_path="lexique_pos.json")
 
-# Desactiver les features lexicales
+# Désactiver les features lexicales
 result = engine.analyser(tokens, use_lex=False)
 ```
 
@@ -104,16 +104,16 @@ result = engine.analyser(tokens, use_lex=False)
 
 Le post-traitement applique automatiquement trois niveaux de corrections :
 
-1. **Homographes POS-aware** (~2 700 entrees) : desambiguisation par categorie grammaticale (ex: jean/NOM = dʒin vs Jean/NOM PROPRE = ʒɑ̃)
-2. **Table plate** (~3 500 corrections manuelles) : corrections ciblees avec separateurs
-3. **Corrections lexique** (optionnel, ~30 000 entrees) : corrections etendues depuis le lexique de reference
+1. **Homographes POS-aware** (~2 700 entrées) : désambiguïsation par catégorie grammaticale (ex: jean/NOM = dʒin vs Jean/NOM PROPRE = ʒɑ̃)
+2. **Table plate** (~3 500 corrections manuelles) : corrections ciblées avec séparateurs
+3. **Corrections lexique** (optionnel, ~30 000 entrées) : corrections étendues depuis le lexique de référence
 
 ```python
-# Activer les corrections etendues du lexique
+# Activer les corrections étendues du lexique
 engine = creer_engine(corrections_lexique=True)
 ```
 
-Les corrections stockent les separateurs dans l'IPA (`aba-ʒuʁ`, `d'abɔʁ`). Quand `sep_hyphen`/`sep_apos` ne sont pas actifs, les separateurs sont automatiquement retires.
+Les corrections stockent les séparateurs dans l'IPA (`aba-ʒuʁ`, `d'abɔʁ`). Quand `sep_hyphen`/`sep_apos` ne sont pas actifs, les séparateurs sont automatiquement retirés.
 
 ## Résultats
 
@@ -160,38 +160,38 @@ CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https
 
 ### `tokeniser(text) -> list[str]`
 
-Tokenise une phrase francaise (gestion apostrophes, ponctuation, contractions).
+Tokenise une phrase française (gestion apostrophes, ponctuation, contractions).
 
 ### `creer_engine(mode, models_dir, lexicon_path, corrections_lexique)`
 
-Factory pour creer un engine d'inference. Modes : `"auto"` (defaut), `"local"`, `"onnx"` (tous trois : ONNX Runtime).
-Les modes `"numpy"` et `"pure"` levent `ValueError` dans la v0 (voir « Backend d'inference »).
-`models_dir` permet de specifier le dossier des modeles (sinon cascade automatique, puis telechargement au premier usage).
-`corrections_lexique=True` charge les corrections etendues du lexique (~30K entrees).
+Factory pour créer un engine d'inférence. Modes : `"auto"` (défaut), `"local"`, `"onnx"` (tous trois : ONNX Runtime).
+Les modes `"numpy"` et `"pure"` lèvent `ValueError` dans la v0 (voir « Backend d'inférence »).
+`models_dir` permet de spécifier le dossier des modèles (sinon cascade automatique, puis téléchargement au premier usage).
+`corrections_lexique=True` charge les corrections étendues du lexique (~30K entrées).
 
 ### `engine.analyser(tokens, *, use_lex=True, sep_hyphen=False, sep_apos=False) -> dict`
 
 Analyse une liste de tokens et retourne un dictionnaire :
 - `g2p` : transcription IPA par token
-- `pos` : etiquette POS par token
+- `pos` : étiquette POS par token
 - `liaison` : label liaison par token (`none`, `Lz`, `Lt`, `Ln`, `Lr`, `Lp`)
 - `morpho` : dict de listes par trait (`Number`, `Gender`, `VerbForm`, `Mood`, `Tense`, `Person`)
 
 Options :
-- `use_lex=False` : desactive les features lexicales
-- `sep_hyphen=True` : conserve les tirets dans l'IPA des mots composes
-- `sep_apos=True` : conserve les apostrophes dans l'IPA des elisions
+- `use_lex=False` : désactive les features lexicales
+- `sep_hyphen=True` : conserve les tirets dans l'IPA des mots composés
+- `sep_apos=True` : conserve les apostrophes dans l'IPA des élisions
 
 ### `corriger_g2p(mot, ipa, pos, *, keep_sep=False) -> str`
 
-Applique la table de corrections puis les regles (ex+consonne, ex+voyelle, yod).
-`keep_sep=True` conserve les separateurs `-` et `'` dans l'IPA retourne.
+Applique la table de corrections puis les règles (ex+consonne, ex+voyelle, yod).
+`keep_sep=True` conserve les séparateurs `-` et `'` dans l'IPA retourné.
 
 ### `appliquer_liaison(tokens, phones, liaisons) -> list[str]`
 
-Applique les consonnes de liaison entre tokens consecutifs.
+Applique les consonnes de liaison entre tokens consécutifs.
 
-## Architecture du modele (V4)
+## Architecture du modèle (V4)
 
 ```
 Phrase → Char Embedding (64d) → Shared BiLSTM (2x160h → 320d)
@@ -206,18 +206,18 @@ Phrase → Char Embedding (64d) → Shared BiLSTM (2x160h → 320d)
                                    POS Num Gen VF  Mood Tns Per Liaison
 ```
 
-- **Entree** : sequence de caracteres avec `<BOS>`, `<SEP>`, `<EOS>`
+- **Entrée** : séquence de caractères avec `<BOS>`, `<SEP>`, `<EOS>`
 - **Lex Features** : 24d par mot (21 POS one-hot + known + n_candidates + unambiguous)
-- **G2P** : prediction par caractere avec labels `_CONT` (continuation) et separateurs `-`/`'`
-- **Tetes mot** : representation mot = fwd[dernier_char] || bwd[premier_char] + lex_proj(24→24)
+- **G2P** : prédiction par caractère avec labels `_CONT` (continuation) et séparateurs `-`/`'`
+- **Têtes mot** : représentation mot = fwd[dernier_char] || bwd[premier_char] + lex_proj(24→24)
 
 ## Limites connues
 
 - Les homographes au sens strict (« est », « fils »…) ne sont justes que dans 62 à 73 % des cas
 - Sur le jeu hors domaine, seules 66,5 % des liaisons obligatoires sont faites (inversions du type « est-il »)
-- Le G2P est evalue en contexte phrastique ; la performance sur mots isoles hors-vocabulaire est plus basse
-- La liaison `Lp` est tres rare dans les donnees d'entrainement
-- Les noms propres et neologismes peuvent produire des transcriptions approximatives
+- Le G2P est évalué en contexte phrastique ; la performance sur mots isolés hors-vocabulaire est plus basse
+- La liaison `Lp` est très rare dans les données d'entraînement
+- Les noms propres et néologismes peuvent produire des transcriptions approximatives
 
 ## Changelog
 
@@ -228,20 +228,20 @@ Phrase → Char Embedding (64d) → Shared BiLSTM (2x160h → 320d)
 - Tirets d'inversion (« est-ce », « dit-il ») recollés au pronom ; corrections « cet » et « monsieur »
 
 ### 4.1.1
-- Fix pipeline_formules : elisions clitiques, propagation sep_hyphen aux compounds, neutralisation liaison avant ponctuation
+- Fix pipeline_formules : élisions clitiques, propagation sep_hyphen aux compounds, neutralisation liaison avant ponctuation
 
 ### 4.1.0
-- Fix separateurs : `corriger_g2p()` avec `keep_sep`, corrections enrichies avec separateurs
+- Fix séparateurs : `corriger_g2p()` avec `keep_sep`, corrections enrichies avec séparateurs
 - Simplification : V4 uniquement, suppression cascades V2/V3
-- Ajout `g2p_corrections_lexique.json` (30K corrections avec separateurs)
-- Suppression dependance `lexique_pos_candidates.json` (fallback `lectura-lexique`)
+- Ajout `g2p_corrections_lexique.json` (30K corrections avec séparateurs)
+- Suppression dépendance `lexique_pos_candidates.json` (fallback `lectura-lexique`)
 
 ### 4.0.2
-- Corrections G2P etendues, homographes NOM/NOM PROPRE
+- Corrections G2P étendues, homographes NOM/NOM PROPRE
 
 ### 4.0.0
 - Renommage `lectura-g2p` → `lectura-phonemiseur`
-- Modele V4 avec separateurs natifs
+- Modèle V4 avec séparateurs natifs
 
 ## Licence
 

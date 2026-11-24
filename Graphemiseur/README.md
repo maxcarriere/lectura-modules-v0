@@ -2,23 +2,23 @@
 
 Génération v0 (2026) de Lectura — https://www.lectura.world/developpement/modules/v0/
 
-**Graphemiseur neural du francais : P2G + POS + Morphologie (IPA → orthographe)**
+**Graphemiseur neural du français : P2G + POS + Morphologie (IPA → orthographe)**
 
 > Anciennement `lectura-p2g` (pip) / `lectura_p2g` (import).
-> Renomme `lectura-graphemiseur` / `lectura_graphemiseur` a partir de la v4.0.0.
+> Renommé `lectura-graphemiseur` / `lectura_graphemiseur` à partir de la v4.0.0.
 
-Un seul modele BiLSTM char-level multi-tete V7 avec attention cross word-char, lex_select et phone_lex_features (ONNX INT8) qui predit simultanement :
+Un seul modèle BiLSTM char-level multi-tête V7 avec attention cross word-char, lex_select et phone_lex_features (ONNX INT8) qui prédit simultanément :
 
 - **P2G** : transcription IPA vers orthographe (chaîne complète v0 : voir « Résultats »)
-- **POS** : etiquetage morpho-syntaxique — 19 tags
+- **POS** : étiquetage morpho-syntaxique — 19 tags
 - **Morphologie** : genre, nombre, temps, mode, personne, forme verbale
 
-Le modele V7 ajoute un mecanisme d'attention cross word-char et le lex_select (selection lexicale parmi candidats phonetiques).
+Le modèle V7 ajoute un mécanisme d'attention cross word-char et le lex_select (sélection lexicale parmi candidats phonétiques).
 
-Tout tourne en local (ONNX Runtime). Les poids du modele et le lexique phonetique (33,8 Mo en tout) sont telecharges
-depuis Hugging Face au premier usage, puis gardes sur le disque ; les poids sont sous licence CC BY-NC 4.0 (voir « Modèles »).
+Tout tourne en local (ONNX Runtime). Les poids du modèle et le lexique phonétique (33,8 Mo en tout) sont téléchargés
+depuis Hugging Face au premier usage, puis gardés sur le disque ; les poids sont sous licence CC BY-NC 4.0 (voir « Modèles »).
 
-## Demarrage rapide
+## Démarrage rapide
 
 ### Installation
 
@@ -26,12 +26,12 @@ depuis Hugging Face au premier usage, puis gardes sur le disque ; les poids sont
 pip install lectura-graphemiseur             # installe aussi onnxruntime et numpy
 ```
 
-### Utilisation rapide (factory — recommande)
+### Utilisation rapide (factory — recommandé)
 
 ```python
 from lectura_graphemiseur import creer_engine
 
-# Premier appel : telecharge les poids (33,8 Mo) dans ~/.lectura/models/p2g/
+# Premier appel : télécharge les poids (33,8 Mo) dans ~/.lectura/models/p2g/
 engine = creer_engine()
 
 result = engine.analyser(["le", "ɑ̃fɑ̃", "sɔ̃", "aʁive", "a", "la", "mɛzɔ̃"])
@@ -41,7 +41,7 @@ print(result["pos"])     # ['ART:def', 'NOM', 'AUX', 'VER', 'PRE', 'ART:def', 'N
 print(result["morpho"])  # {'Number': ['Plur', 'Plur', ...], 'Gender': [...], ...}
 ```
 
-Modes disponibles : `"auto"` (defaut, ONNX Runtime), `"local"`, `"onnx"`.
+Modes disponibles : `"auto"` (défaut, ONNX Runtime), `"local"`, `"onnx"`.
 
 ## Modèles
 
@@ -61,32 +61,32 @@ Les usages suivants n'utilisent plus le réseau.
 - Le correcteur neuronal des versions précédentes a été retiré (23/11/2026) : il abîmait des mots justes.
   Ses fichiers ne sont plus téléchargés.
 
-## Backend d'inference
+## Backend d'inférence
 
 Le paquet tourne avec ONNX Runtime (25 à 60 ms par phrase mesurés sur CPU, limité à 2 cœurs). Les backends NumPy et pur Python restent
 dans le code, mais demandent des poids convertis (`modeles_numpy/`) qui ne sont pas publiés.
 
 ## Pipeline V7 (raw → lex_select)
 
-`engine.analyser()` applique deux etapes :
+`engine.analyser()` applique deux étapes :
 
-1. **Raw** : prediction brute du modele BiLSTM
-2. **Lex_select** : selection lexicale par phone_lexicon — le modele choisit parmi les candidats phonetiquement compatibles
+1. **Raw** : prédiction brute du modèle BiLSTM
+2. **Lex_select** : sélection lexicale par phone_lexicon — le modèle choisit parmi les candidats phonétiquement compatibles
 
-Le post-traitement n'est pas applique automatiquement. Ce paquet fournit `corriger_phrase_v3()` (coherence
-morphologique et accents, a appeler soi-meme). Les formules (nombres, sigles, dates), les elisions, les mots composes,
-les noms propres et la chaine complete sont dans `lectura-p2g` (fonction `analyser()`), qui depend de ce paquet et de
+Le post-traitement n'est pas appliqué automatiquement. Ce paquet fournit `corriger_phrase_v3()` (cohérence
+morphologique et accents, à appeler soi-même). Les formules (nombres, sigles, dates), les élisions, les mots composés,
+les noms propres et la chaîne complète sont dans `lectura-p2g` (fonction `analyser()`), qui dépend de ce paquet et de
 `lectura-formules`.
 
 ## Phone_lex_features (V7)
 
-Le modele V7 utilise un vecteur de 28 dimensions par mot (`phone_lex_features`), construit a partir du `phone_lexicon.db` :
+Le modèle V7 utilise un vecteur de 28 dimensions par mot (`phone_lex_features`), construit à partir du `phone_lexicon.db` :
 
-- 19d : POS one-hot (candidats POS du lexique phonetique)
+- 19d : POS one-hot (candidats POS du lexique phonétique)
 - 3d : features morphologiques (genre, nombre)
 - 6d : features lexicales (known, n_candidates, unambiguous, top_freq, has_verb, has_nom)
 
-Le `phone_lexicon.db` est detecte automatiquement dans le dossier modeles. Sans lexique, le modele fonctionne normalement (features = zeros).
+Le `phone_lexicon.db` est détecté automatiquement dans le dossier modèles. Sans lexique, le modèle fonctionne normalement (features = zéros).
 
 ## Résultats
 
@@ -122,18 +122,18 @@ CSF18 : Liu, Hueber, Feng, Beautemps, Sankar, DOI [10.5281/zenodo.5554849](https
 
 ### `creer_engine(mode, models_dir, lexicon_path)`
 
-Factory pour creer un engine d'inference. Modes : `"auto"`, `"local"`, `"onnx"` (et `"numpy"`, `"pure"`, voir plus haut).
-`models_dir` permet de specifier le dossier des modeles (sinon cascade automatique, puis telechargement au premier usage).
+Factory pour créer un engine d'inférence. Modes : `"auto"`, `"local"`, `"onnx"` (et `"numpy"`, `"pure"`, voir plus haut).
+`models_dir` permet de spécifier le dossier des modèles (sinon cascade automatique, puis téléchargement au premier usage).
 
 ### `engine.analyser(ipa_words, *, use_lex=True) -> dict`
 
 Analyse une liste de mots IPA et retourne un dictionnaire :
-- `ipa_words` : liste des mots IPA d'entree
+- `ipa_words` : liste des mots IPA d'entrée
 - `ortho` : orthographe reconstruite par mot
-- `pos` : etiquette POS par mot
+- `pos` : étiquette POS par mot
 - `morpho` : dict de listes par trait (`Number`, `Gender`, `VerbForm`, `Mood`, `Tense`, `Person`)
 
-Le parametre `use_lex=False` desactive les features lexicales (utile pour le benchmarking).
+Le paramètre `use_lex=False` désactive les features lexicales (utile pour le benchmarking).
 
 ### `tokeniser_ipa(text) -> list[str]`
 
@@ -141,15 +141,15 @@ Tokenise une phrase IPA (split sur espaces).
 
 ### `corriger_phrase_v3(ortho_words, pos_tags, morpho_features, lexique=None, lexique_index=None, freq_map=None, lex_candidates=None, skip_positions=None) -> list[str]`
 
-Post-traitement : coherence ortho-morpho (pluriel, feminin, conjugaison), accords determinant/pronom, homophones par
-POS (a/à, ou/où) et par morphologie (il/ils, au/aux). `skip_positions` protege des positions de toute correction.
+Post-traitement : cohérence ortho-morpho (pluriel, féminin, conjugaison), accords déterminant/pronom, homophones par
+POS (a/à, ou/où) et par morphologie (il/ils, au/aux). `skip_positions` protège des positions de toute correction.
 Pas de formules ici : elles sont dans `lectura-p2g`.
 
 ### `corriger_phrase_v2(ortho_words, pos_tags, lexique) -> list[str]`
 
-Post-traitement contextuel inter-mots : accord determinant-nom, sujet-verbe.
+Post-traitement contextuel inter-mots : accord déterminant-nom, sujet-verbe.
 
-## Architecture du modele (V7)
+## Architecture du modèle (V7)
 
 ```
 Phrase IPA → Char Embedding (64d) → Shared BiLSTM (2x192h → 384d)
@@ -166,17 +166,17 @@ Phrase IPA → Char Embedding (64d) → Shared BiLSTM (2x192h → 384d)
                                                                     → Lex_Select Head
 ```
 
-- **Entree** : sequence de caracteres IPA avec `<BOS>`, `<SEP>`, `<EOS>`
+- **Entrée** : séquence de caractères IPA avec `<BOS>`, `<SEP>`, `<EOS>`
 - **Phone Lex Features** : 28d par mot (19 POS one-hot + 3 morpho + 6 lex features)
-- **Lex Select** : selection parmi candidats phonetiques du phone_lexicon
-- **Word Feedback** : les representations mot sont diffusees aux positions char correspondantes
-- **P2G** : prediction par caractere IPA avec labels `_CONT` (continuation pour marques combinantes)
+- **Lex Select** : sélection parmi candidats phonétiques du phone_lexicon
+- **Word Feedback** : les représentations mot sont diffusées aux positions char correspondantes
+- **P2G** : prédiction par caractère IPA avec labels `_CONT` (continuation pour marques combinantes)
 
 ## Limites connues
 
-- Le P2G est intrinsequement ambigu pour les homophones (est/et, a/a, ses/ces) — resolution partielle par le contexte phrastique
-- Les marques morphologiques muettes (-s pluriel, -e feminin) restent une source d'erreur importante
-- Le modele ne gere pas la ponctuation ni la casse (entree = IPA pur)
+- Le P2G est intrinsèquement ambigu pour les homophones (est/et, a/a, ses/ces) — résolution partielle par le contexte phrastique
+- Les marques morphologiques muettes (-s pluriel, -e féminin) restent une source d'erreur importante
+- Le modèle ne gère pas la ponctuation ni la casse (entrée = IPA pur)
 - Performance sur mots hors-vocabulaire plus basse qu'en contexte
 
 ## Licence

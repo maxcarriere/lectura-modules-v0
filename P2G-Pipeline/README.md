@@ -2,7 +2,7 @@
 
 Génération v0 (2026) de Lectura — https://www.lectura.world/developpement/modules/v0/
 
-Pipeline P2G complet du francais : Graphemiseur + Formules + Noms propres (IPA -> orthographe).
+Pipeline P2G complet du français : Graphemiseur + Formules + Noms propres (IPA -> orthographe).
 
 Couche 2 du pipeline P2G, en miroir de `lectura-g2p` pour le G2P.
 
@@ -10,7 +10,7 @@ Couche 2 du pipeline P2G, en miroir de `lectura-g2p` pour le G2P.
 
 ```bash
 pip install lectura-p2g              # pipeline complet
-pip install lectura-p2g[aligneur]    # + alignement grapheme-phoneme
+pip install lectura-p2g[aligneur]    # + alignement graphème-phonème
 ```
 
 ## Modèles
@@ -89,7 +89,7 @@ print(result["alignments"][0].syllabes)
 
 ## Architecture
 
-- **Couche 1** : `lectura-graphemiseur` — modele P2G (poids telecharges au premier usage, voir « Modèles »)
+- **Couche 1** : `lectura-graphemiseur` — modèle P2G (poids téléchargés au premier usage, voir « Modèles »)
 - **Couche 2** : `lectura-p2g` — pipeline complet, dans cet ordre : formules (nombres, sigles, via `lectura-formules`),
   élisions, mots composés, table de corrections, cohérence morphologique et accents, noms propres, entités nommées.
 

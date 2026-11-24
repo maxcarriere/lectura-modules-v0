@@ -267,3 +267,37 @@ def filtre_multext(
             pattern[idx] = code
 
     return "".join(pattern) + "%"
+
+
+def motifs_multext(
+    *,
+    pos: str | None = None,
+    mode: str | None = None,
+    temps: str | None = None,
+    personne: str | None = None,
+    nombre: str | None = None,
+    genre: str | None = None,
+) -> list[str]:
+    """Patterns SQL LIKE a combiner par OR (liste vide : aucun filtre multext).
+
+    Comme ``filtre_multext``, mais sans categorie (``pos``) les traits
+    ``genre``, ``nombre`` et ``personne`` ne sont plus ignores : on produit un
+    pattern par categorie qui porte tous les traits demandes (noms, adjectifs,
+    determinants, pronoms, verbes).
+    """
+    if pos or mode or temps:
+        motif = filtre_multext(
+            pos=pos, mode=mode, temps=temps,
+            personne=personne, nombre=nombre, genre=genre,
+        )
+        return [] if motif == "%" else [motif]
+
+    traits = {"personne": personne, "nombre": nombre, "genre": genre}
+    demandes = [nom for nom, valeur in traits.items() if valeur is not None]
+    if not demandes:
+        return []
+    return [
+        filtre_multext(pos=code, personne=personne, nombre=nombre, genre=genre)
+        for code, positions in _TRAIT_POSITIONS.items()
+        if all(nom in positions for nom in demandes)
+    ]

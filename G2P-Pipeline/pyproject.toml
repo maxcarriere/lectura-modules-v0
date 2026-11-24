@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lectura-g2p"
-version = "4.2.0"
+version = "4.2.1"
 description = "Pipeline G2P complet du français — Tokeniseur + Formules + Phonémiseur + Groupes de lecture"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ keywords = [
     "phonemizer", "phonetics", "ipa", "tts-frontend",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Natural Language :: French",
@@ -29,7 +29,7 @@ classifiers = [
 dependencies = [
     "lectura-tokeniseur>=2.3.7",
     "lectura-formules>=3.8.0",
-    "lectura-phonemiseur>=4.2.0",
+    "lectura-phonemiseur>=4.2.3",
 ]
 
 [project.optional-dependencies]

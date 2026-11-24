@@ -3296,6 +3296,8 @@ _INTERVALLE_RE = re.compile(r"^([\[\]])([^;,]+)[;,]([^;,]+)([\[\]])$")
 
 _INTERVALLE_BOUNDS = set() if _MODE_API else _load_intervalle_bounds()
 _INTERVALLE_NUM_RE = re.compile(r"^-?\d+\.?\d*$")
+# Forme écrite : « de 3 à 5 », « 3 à 5 » (correctif du 24/11/2026 : elle était épelée)
+_INTERVALLE_TEXTE_RE = re.compile(r"^(?:([Dd]e)\s+)?(\S+)\s+([àaÀ])\s+(\S+)$")
 
 
 def _is_valid_bound(val: str) -> bool:
@@ -3330,6 +3332,45 @@ def _read_bound(val: str, span: Span, composant: int,
     return events
 
 
+def _lire_intervalle_texte(
+    s: str,
+    m: re.Match[str],
+    span: Span,
+    options: OptionsLecture,
+) -> LectureFormuleResult:
+    """Lit la forme écrite « de 3 à 5 » (ou « 3 à 5 ») : de trois à cinq.
+
+    Mêmes composants que la forme à crochets : borne gauche (0),
+    connecteurs « de » et « à » (1), borne droite (2). « de » n'est lu
+    que s'il figure dans le texte.
+    """
+    events: list[EventFormuleLecture] = []
+    if m.group(1):
+        evt_de = EventFormuleLecture(
+            ortho=m.group(1), phone="də", span_source=span, composant=1,
+        )
+        evt_de.span_num = m.span(1)
+        events.append(evt_de)
+
+    left_events = _read_bound(m.group(2), span, composant=0, options=options)
+    for evt in left_events:
+        evt.span_num = m.span(2)
+    events.extend(left_events)
+
+    evt_a = EventFormuleLecture(
+        ortho="à", phone="a", span_source=span, composant=1,
+    )
+    evt_a.span_num = m.span(3)
+    events.append(evt_a)
+
+    right_events = _read_bound(m.group(4), span, composant=2, options=options)
+    for evt in right_events:
+        evt.span_num = m.span(4)
+    events.extend(right_events)
+
+    return _make_result(events, display_num=s, valeur=s)
+
+
 def lire_intervalle(
     text: str,
     span: Span = (0, 0),
@@ -3347,6 +3388,9 @@ def lire_intervalle(
     s = text.strip()
     m = _INTERVALLE_RE.match(s)
     if not m:
+        mt = _INTERVALLE_TEXTE_RE.match(s)
+        if mt and _is_valid_bound(mt.group(2)) and _is_valid_bound(mt.group(4)):
+            return _lire_intervalle_texte(s, mt, span, options)
         return _epeler_texte(text, span)
 
     left_val = m.group(2).strip()
